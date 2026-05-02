@@ -349,7 +349,16 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     <div class="form-row"><div class="field" style="flex:1"><label>Street address</label><input id="p-addr" placeholder="123 Main St, City, NJ 07000" style="width:100%"></div></div>
     <div class="form-row">
       <div class="field"><label>Type</label><select id="p-type" style="width:150px"><option>Rental</option><option>Primary home</option></select></div>
-      <div class="field"><label>Current value ($)</label><input type="number" id="p-val" placeholder="350000" style="width:140px"></div>
+      <div class="field" style="flex-direction:row;align-items:flex-end;gap:0">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">Zestimate / Value ($)</label>
+          <div style="display:flex;gap:0">
+            <input type="number" id="p-val" placeholder="Paste from Zillow" style="width:160px;border-radius:var(--radius) 0 0 var(--radius);border-right:none">
+            <button type="button" onclick="openZillow('p-addr','p-val')" style="padding:0 10px;height:34px;background:var(--bg4);border:1px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;cursor:pointer;color:var(--accent);font-size:11px;font-family:'DM Mono',monospace;white-space:nowrap" title="Open Zillow for this address">Z&#8599;</button>
+          </div>
+          <span id="p-val-note" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);min-height:14px"></span>
+        </div>
+      </div>
       <div class="field"><label>Purchase price ($)</label><input type="number" id="p-purch" placeholder="280000" style="width:140px"></div>
     </div>
     <div class="form-row">
@@ -373,7 +382,16 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     <div class="form-row"><div class="field" style="flex:1"><label>Street address</label><input id="ep-addr" style="width:100%"></div></div>
     <div class="form-row">
       <div class="field"><label>Type</label><select id="ep-type" style="width:150px"><option>Rental</option><option>Primary home</option></select></div>
-      <div class="field"><label>Current value ($)</label><input type="number" id="ep-val" style="width:140px"></div>
+      <div class="field" style="flex-direction:row;align-items:flex-end;gap:0">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">Zestimate / Value ($)</label>
+          <div style="display:flex;gap:0">
+            <input type="number" id="ep-val" placeholder="Paste from Zillow" style="width:160px;border-radius:var(--radius) 0 0 var(--radius);border-right:none">
+            <button type="button" onclick="openZillow('ep-addr','ep-val')" style="padding:0 10px;height:34px;background:var(--bg4);border:1px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;cursor:pointer;color:var(--accent);font-size:11px;font-family:'DM Mono',monospace;white-space:nowrap" title="Open Zillow for this address">Z&#8599;</button>
+          </div>
+          <span id="ep-val-note" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);min-height:14px" id="ep-val-note"></span>
+        </div>
+      </div>
       <div class="field"><label>Purchase price ($)</label><input type="number" id="ep-purch" style="width:140px"></div>
     </div>
     <div class="form-row">
@@ -442,7 +460,7 @@ function fillSelects(){
 // PROPERTIES
 function addProp(){
   var addr=document.getElementById('p-addr').value.trim();if(!addr)return;
-  S.properties.push({address:addr,type:document.getElementById('p-type').value,value:parseFloat(document.getElementById('p-val').value)||0,purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value});
+  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value});
   save();closeModal('add-prop');fillSelects();
   ['p-addr','p-val','p-purch','p-rent','p-yr','p-sqft','p-notes'].forEach(function(id){document.getElementById(id).value='';});
   renderProps();
@@ -458,11 +476,12 @@ function openEditProp(i){
   document.getElementById('ep-yr').value=p.year||'';
   document.getElementById('ep-sqft').value=p.sqft||'';
   document.getElementById('ep-notes').value=p.notes||'';
+  var vn=document.getElementById('ep-val-note');if(vn)vn.textContent=p.valueUpdated?'Last updated: '+p.valueUpdated+' — click Z to refresh':p.value?'No update date recorded':'Enter value or click Z to pull from Zillow';
   openModal('edit-prop');
 }
 function saveProp(){
   var i=parseInt(document.getElementById('ep-i').value);
-  S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,value:parseFloat(document.getElementById('ep-val').value)||0,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value};
+  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value};
   save();closeModal('edit-prop');renderProps();fillSelects();
 }
 function delPropModal(){
@@ -488,13 +507,13 @@ function renderProps(){
       +'<h4>'+sh(p.address)+'</h4>'
       +'<div class="prop-sub">'+p.type.toUpperCase()+(p.sqft?' &middot; '+Number(p.sqft).toLocaleString()+' SQ FT':'')+(p.year?' &middot; BUILT '+p.year:'')+'</div>'
       +'<div class="prop-stats">'
-      +'<div class="prop-stat"><div class="ps-label">Value</div><div class="ps-val">'+fm(p.value)+'</div></div>'
+      +'<div class="prop-stat"><div class="ps-label">Zestimate<span style="font-size:9px;margin-left:4px;color:var(--text3)">'+valueAge(p)+'</span></div><div class="ps-val">'+fm(p.value)+'</div></div>'
       +'<div class="prop-stat"><div class="ps-label">Equity</div><div class="ps-val" style="color:var(--green)">'+fm(equity)+'</div></div>'
       +(p.rent?'<div class="prop-stat"><div class="ps-label">Rent/mo</div><div class="ps-val">'+fm(p.rent)+'</div></div>':'')
       +'<div class="prop-stat"><div class="ps-label">Expenses YTD</div><div class="ps-val" style="color:var(--red)">'+fm(exp)+'</div></div>'
       +'</div>'
       +(tenant?'<div style="margin-top:10px;font-size:12px;color:var(--text2)">Tenant: <span style="color:var(--text)">'+tenant.name+'</span> &middot; Lease ends '+fd(tenant.leaseEnd)+'</div>':'')
-      +'<div class="prop-actions" onclick="event.stopPropagation()"><button class="btn sm" onclick="openEditProp('+i+')">Edit details</button></div>'
+      +'<div class="prop-actions" onclick="event.stopPropagation()"><button class="btn sm" onclick="openEditProp('+i+')">Edit details</button><button class="btn sm" onclick="quickRefreshZillow('+i+',event)" title="Open Zillow to get latest Zestimate" style="color:var(--accent)">Z&#8599; Refresh value</button></div>'
       +'</div>';
   }).join('');
 }
@@ -861,6 +880,48 @@ function updateSync(){
   else{if(dot)dot.className='sync-dot';if(lbl)lbl.textContent='Local only';}
   var ct=document.getElementById('cfg-token');if(ct)ct.value=g.token;
   var cg=document.getElementById('cfg-gist');if(cg)cg.value=g.id;
+}
+
+// ZILLOW HELPERS
+function zillowUrl(addr){
+  if(!addr)return 'https://www.zillow.com';
+  var q=addr.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'-').replace(/-+/g,'-');
+  return 'https://www.zillow.com/homes/'+encodeURIComponent(addr)+'_rb/';
+}
+function openZillow(addrId,valId){
+  var addr=document.getElementById(addrId)&&document.getElementById(addrId).value.trim();
+  if(!addr){alert('Enter the property address first.');return;}
+  // Open zillow search for this address
+  var url='https://www.zillow.com/homes/'+encodeURIComponent(addr)+'_rb/';
+  window.open(url,'_blank');
+  // Show a tip on the note field
+  var noteId=valId+'-note';
+  var note=document.getElementById(noteId);
+  if(note)note.textContent='Zillow opened — find the Zestimate and paste it in the field above, then save.';
+  // Focus the value field so user can paste right after
+  setTimeout(function(){var el=document.getElementById(valId);if(el)el.focus();},400);
+}
+function quickRefreshZillow(i,event){
+  event.stopPropagation();
+  var p=S.properties[i];
+  if(!p)return;
+  var url='https://www.zillow.com/homes/'+encodeURIComponent(p.address)+'_rb/';
+  window.open(url,'_blank');
+  // Open edit modal so user can paste immediately
+  openEditProp(i);
+  var vn=document.getElementById('ep-val-note');
+  if(vn)vn.textContent='Zillow opened — paste the Zestimate above and click Save changes.';
+  var el=document.getElementById('ep-val');if(el){el.select();}
+}
+function valueAge(p){
+  if(!p.valueUpdated)return p.value?'':'no value';
+  var d=new Date(p.valueUpdated);var now=new Date();
+  var days=Math.round((now-d)/86400000);
+  if(days===0)return 'today';if(days===1)return '1d ago';
+  if(days<30)return days+'d ago';
+  if(days<60)return '1mo ago';
+  if(days<365)return Math.round(days/30)+'mo ago';
+  return Math.round(days/365)+'y ago';
 }
 
 // INIT
