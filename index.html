@@ -188,7 +188,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
         <div class="panel-header">
           <span class="panel-title">All expenses</span>
           <div style="display:flex;gap:8px">
-            <select id="ef-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All properties</option></select>
+            <select id="ef-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="this.dataset.selectedAddr=this.value;renderExp()"><option value="">All properties</option></select>
             <select id="ef-ded" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All types</option><option value="yes">Deductible</option><option value="no">Non-ded.</option></select>
             <select id="ef-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All years</option></select>
           </div>
@@ -453,12 +453,10 @@ function fillSelects(){
   if(ef){
     var prevIdx=ef.value;
     var prevName=prevIdx!==''?sh((S.properties[parseInt(prevIdx)]||{}).address||''):'';
+    var prevAddr=ef.dataset.selectedAddr||'';
     ef.innerHTML='<option value="">All properties</option>';
-    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);ef.appendChild(o);});
-    if(prevName){
-      var matched=Array.from(ef.options).find(function(o){return o.textContent===prevName;});
-      if(matched)ef.value=matched.value;
-    }
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=p.address;o.textContent=sh(p.address);ef.appendChild(o);});
+    if(prevAddr)ef.value=prevAddr;
   }
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
@@ -585,12 +583,16 @@ function addExpense(){
 }
 function delExp(i){S.expenses.splice(i,1);save();renderExp();}
 function renderExp(){
-  fillSelects();
   var fp=document.getElementById('ef-prop')&&document.getElementById('ef-prop').value;
   var fd2=document.getElementById('ef-ded')&&document.getElementById('ef-ded').value;
   var fy=document.getElementById('ef-yr')&&document.getElementById('ef-yr').value;
   var data=S.expenses.map(function(e,i){return Object.assign({},e,{_i:i});});
-  if(fp!==''&&fp!=null)data=data.filter(function(e){return parseInt(e.propIdx)===parseInt(fp);});
+  if(fp!==''&&fp!=null){
+    data=data.filter(function(e){
+      var p=S.properties[e.propIdx];
+      return p&&p.address===fp;
+    });
+  }
   if(fd2)data=data.filter(function(e){return e.deductible===fd2;});
   if(fy)data=data.filter(function(e){return e.date&&e.date.startsWith(fy);});
   data.sort(function(a,b){return b.date.localeCompare(a.date);});
