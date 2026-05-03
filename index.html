@@ -368,6 +368,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Sq ft</label><input type="number" id="p-sqft" placeholder="1400" style="width:95px"></div>
     </div>
     <div class="form-row"><div class="field" style="flex:1"><label>Notes</label><textarea id="p-notes" style="width:100%;height:60px;resize:vertical"></textarea></div></div>
+    <div class="form-row"><div class="field" style="flex:1"><label>Google Drive folder link</label><input id="p-drive" placeholder="Paste Google Drive folder URL for this property" style="width:100%"></div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn" onclick="closeModal('add-prop')">Cancel</button>
       <button class="btn primary" onclick="addProp()">Add property</button>
@@ -402,6 +403,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Sq ft</label><input type="number" id="ep-sqft" style="width:95px"></div>
     </div>
     <div class="form-row"><div class="field" style="flex:1"><label>Notes</label><textarea id="ep-notes" style="width:100%;height:60px;resize:vertical"></textarea></div></div>
+    <div class="form-row"><div class="field" style="flex:1"><label>Google Drive folder link</label><div style="display:flex;gap:0"><input id="ep-drive" placeholder="Paste Google Drive folder URL" style="width:100%;border-radius:var(--radius) 0 0 var(--radius);border-right:none"><a id="ep-drive-link" href="#" target="_blank" style="display:flex;align-items:center;padding:0 12px;height:34px;background:var(--bg4);border:1px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;font-size:12px;color:var(--accent);text-decoration:none;white-space:nowrap" onclick="updateDriveLink()">Open &#8599;</a></div></div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn danger" onclick="delPropModal()" style="margin-right:auto">Delete</button>
       <button class="btn" onclick="closeModal('edit-prop')">Cancel</button>
@@ -462,9 +464,9 @@ function fillSelects(){
 // PROPERTIES
 function addProp(){
   var addr=document.getElementById('p-addr').value.trim();if(!addr)return;
-  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,llc:document.getElementById('p-llc').value.trim(),value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value});
+  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,llc:document.getElementById('p-llc').value.trim(),value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value,drive:document.getElementById('p-drive').value.trim()});
   save();closeModal('add-prop');fillSelects();
-  ['p-addr','p-val','p-purch','p-llc','p-rent','p-yr','p-sqft','p-notes'].forEach(function(id){document.getElementById(id).value='';});
+  ['p-addr','p-val','p-purch','p-llc','p-rent','p-yr','p-sqft','p-notes','p-drive'].forEach(function(id){document.getElementById(id).value='';});
   renderProps();
 }
 function openEditProp(i){
@@ -479,12 +481,14 @@ function openEditProp(i){
   document.getElementById('ep-sqft').value=p.sqft||'';
   document.getElementById('ep-llc').value=p.llc||'';
   document.getElementById('ep-notes').value=p.notes||'';
+  document.getElementById('ep-drive').value=p.drive||'';
+  var dl=document.getElementById('ep-drive-link');if(dl){dl.href=p.drive||'#';dl.style.opacity=p.drive?'1':'0.4';}
   var vn=document.getElementById('ep-val-note');if(vn)vn.textContent=p.valueUpdated?'Last updated: '+p.valueUpdated+' — click Z to refresh':p.value?'No update date recorded':'Enter value or click Z to pull from Zillow';
   openModal('edit-prop');
 }
 function saveProp(){
   var i=parseInt(document.getElementById('ep-i').value);
-  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value};
+  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim()};
   save();closeModal('edit-prop');renderProps();fillSelects();
 }
 function delPropModal(){
@@ -516,7 +520,10 @@ function renderProps(){
       +'<div class="prop-stat"><div class="ps-label">Expenses YTD</div><div class="ps-val" style="color:var(--red)">'+fm(exp)+'</div></div>'
       +'</div>'
       +(tenant?'<div style="margin-top:10px;font-size:12px;color:var(--text2)">Tenant: <span style="color:var(--text)">'+tenant.name+'</span> &middot; Lease ends '+fd(tenant.leaseEnd)+'</div>':'')
-      +'<div class="prop-actions" onclick="event.stopPropagation()"><button class="btn sm" onclick="openEditProp('+i+')">Edit details</button><button class="btn sm" onclick="quickRefreshZillow('+i+',event)" title="Open Zillow to get latest Zestimate" style="color:var(--accent)">Z&#8599; Refresh value</button></div>'
+      +(p.drive?'<a href="'+p.drive+'" target="_blank" onclick="event.stopPropagation()" class="btn sm" style="color:var(--accent);text-decoration:none">&#9783; Drive</a>':'')
+      +'<button class="btn sm" onclick="openEditProp('+i+')">Edit details</button>'
+      +'<button class="btn sm" onclick="quickRefreshZillow('+i+',event)" style="color:var(--accent)">Z&#8599; Refresh value</button>'
+      +'</div>'
       +'</div>';
   }).join('');
 }
@@ -915,6 +922,11 @@ function quickRefreshZillow(i,event){
   var vn=document.getElementById('ep-val-note');
   if(vn)vn.textContent='Zillow opened — paste the Zestimate above and click Save changes.';
   var el=document.getElementById('ep-val');if(el){el.select();}
+}
+function updateDriveLink(){
+  var url=document.getElementById('ep-drive').value.trim();
+  var link=document.getElementById('ep-drive-link');
+  if(link){link.href=url||'#';link.style.opacity=url?'1':'0.4';}
 }
 function valueAge(p){
   if(!p.valueUpdated)return p.value?'':'no value';
