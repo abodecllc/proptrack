@@ -450,7 +450,16 @@ function fillSelects(){
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
   });
   var ef=document.getElementById('ef-prop');
-  if(ef){var cv=ef.value;ef.innerHTML='<option value="">All properties</option>';S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);ef.appendChild(o);});ef.value=cv;}
+  if(ef){
+    var prevIdx=ef.value;
+    var prevName=prevIdx!==''?sh((S.properties[parseInt(prevIdx)]||{}).address||''):'';
+    ef.innerHTML='<option value="">All properties</option>';
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);ef.appendChild(o);});
+    if(prevName){
+      var matched=Array.from(ef.options).find(function(o){return o.textContent===prevName;});
+      if(matched)ef.value=matched.value;
+    }
+  }
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
   ['rp-ten','rpf-ten'].forEach(function(id){
@@ -576,6 +585,7 @@ function addExpense(){
 }
 function delExp(i){S.expenses.splice(i,1);save();renderExp();}
 function renderExp(){
+  fillSelects();
   var fp=document.getElementById('ef-prop')&&document.getElementById('ef-prop').value;
   var fd2=document.getElementById('ef-ded')&&document.getElementById('ef-ded').value;
   var fy=document.getElementById('ef-yr')&&document.getElementById('ef-yr').value;
