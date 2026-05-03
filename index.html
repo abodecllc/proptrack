@@ -417,7 +417,7 @@ function save(){try{localStorage.setItem('proptrack_v2',JSON.stringify(S));}catc
 
 var fm=function(n){return '$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});};
 var fd=function(d){return d?new Date(d+'T00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';};
-var fm2=function(m){return m?new Date(m+'-01').toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';};
+var fm2=function(m){if(!m)return '—';var parts=m.split('-');return new Date(parseInt(parts[0]),parseInt(parts[1])-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});};
 var sh=function(a){return a?a.split(',')[0]:'?';};
 var ini=function(n){return n?n.split(' ').map(function(w){return w[0];}).slice(0,2).join('').toUpperCase():'?';};
 var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d;};
