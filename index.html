@@ -362,6 +362,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Purchase price ($)</label><input type="number" id="p-purch" placeholder="280000" style="width:140px"></div>
     </div>
     <div class="form-row">
+      <div class="field"><label>LLC Name</label><input id="p-llc" placeholder="Main St Holdings LLC" style="width:200px"></div>
       <div class="field"><label>Monthly rent ($)</label><input type="number" id="p-rent" placeholder="2200" style="width:130px"></div>
       <div class="field"><label>Year built</label><input type="number" id="p-yr" placeholder="1985" style="width:105px"></div>
       <div class="field"><label>Sq ft</label><input type="number" id="p-sqft" placeholder="1400" style="width:95px"></div>
@@ -395,6 +396,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Purchase price ($)</label><input type="number" id="ep-purch" style="width:140px"></div>
     </div>
     <div class="form-row">
+      <div class="field"><label>LLC Name</label><input id="ep-llc" placeholder="Main St Holdings LLC" style="width:200px"></div>
       <div class="field"><label>Monthly rent ($)</label><input type="number" id="ep-rent" style="width:130px"></div>
       <div class="field"><label>Year built</label><input type="number" id="ep-yr" style="width:105px"></div>
       <div class="field"><label>Sq ft</label><input type="number" id="ep-sqft" style="width:95px"></div>
@@ -460,9 +462,9 @@ function fillSelects(){
 // PROPERTIES
 function addProp(){
   var addr=document.getElementById('p-addr').value.trim();if(!addr)return;
-  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value});
+  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,llc:document.getElementById('p-llc').value.trim(),value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value});
   save();closeModal('add-prop');fillSelects();
-  ['p-addr','p-val','p-purch','p-rent','p-yr','p-sqft','p-notes'].forEach(function(id){document.getElementById(id).value='';});
+  ['p-addr','p-val','p-purch','p-llc','p-rent','p-yr','p-sqft','p-notes'].forEach(function(id){document.getElementById(id).value='';});
   renderProps();
 }
 function openEditProp(i){
@@ -475,13 +477,14 @@ function openEditProp(i){
   document.getElementById('ep-rent').value=p.rent||'';
   document.getElementById('ep-yr').value=p.year||'';
   document.getElementById('ep-sqft').value=p.sqft||'';
+  document.getElementById('ep-llc').value=p.llc||'';
   document.getElementById('ep-notes').value=p.notes||'';
   var vn=document.getElementById('ep-val-note');if(vn)vn.textContent=p.valueUpdated?'Last updated: '+p.valueUpdated+' — click Z to refresh':p.value?'No update date recorded':'Enter value or click Z to pull from Zillow';
   openModal('edit-prop');
 }
 function saveProp(){
   var i=parseInt(document.getElementById('ep-i').value);
-  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value};
+  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value};
   save();closeModal('edit-prop');renderProps();fillSelects();
 }
 function delPropModal(){
@@ -505,7 +508,7 @@ function renderProps(){
     var cls=p.type==='Primary home'?'primary-home':'rental';
     return '<div class="prop-card '+cls+'" onclick="openEditProp('+i+')">'
       +'<h4>'+sh(p.address)+'</h4>'
-      +'<div class="prop-sub">'+p.type.toUpperCase()+(p.sqft?' &middot; '+Number(p.sqft).toLocaleString()+' SQ FT':'')+(p.year?' &middot; BUILT '+p.year:'')+'</div>'
+      +'<div class="prop-sub">'+p.type.toUpperCase()+(p.llc?' &middot; '+p.llc:'')+(p.sqft?' &middot; '+Number(p.sqft).toLocaleString()+' SQ FT':'')+(p.year?' &middot; BUILT '+p.year:'')+'</div>'
       +'<div class="prop-stats">'
       +'<div class="prop-stat"><div class="ps-label">Zestimate<span style="font-size:9px;margin-left:4px;color:var(--text3)">'+valueAge(p)+'</span></div><div class="ps-val">'+fm(p.value)+'</div></div>'
       +'<div class="prop-stat"><div class="ps-label">Equity</div><div class="ps-val" style="color:var(--green)">'+fm(equity)+'</div></div>'
@@ -799,11 +802,11 @@ function renderExport(){
 function exportCSV(type){
   var header='',rows='';
   if(type==='all'||type==='ded'||type==='rental'){
-    header='Date,Property,Type,Category,Description,Amount,Deductible\n';
+    header='Date,Property,Type,LLC,Category,Description,Amount,Deductible\n';
     var data=S.expenses;
     if(type==='ded')data=data.filter(function(e){return e.deductible==='yes';});
     if(type==='rental')data=data.filter(function(e){return S.properties[e.propIdx]&&S.properties[e.propIdx].type==='Rental';});
-    rows=data.map(function(e){var p=S.properties[e.propIdx];return e.date+',"'+(p?p.address:'')+'","'+(p?p.type:'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+(e.deductible==='yes'?'Yes':'No');}).join('\n');
+    rows=data.map(function(e){var p=S.properties[e.propIdx];return e.date+',"'+(p?p.address:'')+'","'+(p?p.type:'')+'","'+(p&&p.llc?p.llc:'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+(e.deductible==='yes'?'Yes':'No');}).join('\n');
   }else if(type==='rent'){
     header='Month,Tenant,Property,Expected,Received,Status,Notes\n';
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
@@ -811,8 +814,8 @@ function exportCSV(type){
     header='Property,Lender,Original Balance,Current Balance,Rate %,Monthly Payment,Next Due\n';
     rows=S.loans.map(function(l){var p=S.properties[l.propIdx];return '"'+(p?p.address:'')+'","'+l.lender+'",'+l.original+','+l.balance+','+l.rate+','+l.payment+','+l.due;}).join('\n');
   }else if(type==='tenants'){
-    header='Property,Name,Email,Phone,Lease Start,Lease End,Rent,Deposit,Notes\n';
-    rows=S.tenants.map(function(t){var p=S.properties[t.propIdx];return '"'+(p?p.address:'')+'","'+t.name+'","'+(t.email||'')+'","'+(t.phone||'')+'",'+t.leaseStart+','+t.leaseEnd+','+t.rent+','+t.deposit+',"'+(t.notes||'')+'"';}).join('\n');
+    header='Property,LLC,Name,Email,Phone,Lease Start,Lease End,Rent,Deposit,Notes\n';
+    rows=S.tenants.map(function(t){var p=S.properties[t.propIdx];return '"'+(p?p.address:'')+'","'+(p&&p.llc?p.llc:'')+'","'+t.name+'","'+(t.email||'')+'","'+(t.phone||'')+'",'+t.leaseStart+','+t.leaseEnd+','+t.rent+','+t.deposit+',"'+(t.notes||'')+'"';}).join('\n');
   }
   var blob=new Blob([header+rows],{type:'text/csv'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='proptrack_'+type+'_'+CY+'.csv';a.click();
