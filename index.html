@@ -571,7 +571,7 @@ function addExpense(){
   var a=parseFloat(document.getElementById('e-amt').value)||0;
   if(!d||isNaN(pi)||!a)return;
   S.expenses.push({propIdx:pi,date:d,category:document.getElementById('e-cat').value,desc:document.getElementById('e-desc').value.trim(),amount:a,deductible:document.getElementById('e-ded').value});
-  save();renderExp();fillSelects();
+  save();fillSelects();renderExp();
   ['e-date','e-amt','e-desc'].forEach(function(id){document.getElementById(id).value='';});
 }
 function delExp(i){S.expenses.splice(i,1);save();renderExp();}
@@ -580,7 +580,7 @@ function renderExp(){
   var fd2=document.getElementById('ef-ded')&&document.getElementById('ef-ded').value;
   var fy=document.getElementById('ef-yr')&&document.getElementById('ef-yr').value;
   var data=S.expenses.map(function(e,i){return Object.assign({},e,{_i:i});});
-  if(fp!==''&&fp!=null)data=data.filter(function(e){return e.propIdx==fp;});
+  if(fp!==''&&fp!=null)data=data.filter(function(e){return parseInt(e.propIdx)===parseInt(fp);});
   if(fd2)data=data.filter(function(e){return e.deductible===fd2;});
   if(fy)data=data.filter(function(e){return e.date&&e.date.startsWith(fy);});
   data.sort(function(a,b){return b.date.localeCompare(a.date);});
