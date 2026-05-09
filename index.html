@@ -437,6 +437,32 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT ACCOUNT MODAL -->
+<div class="modal-bg" id="modal-edit-acct">
+  <div class="modal">
+    <h3>Edit account</h3>
+    <input type="hidden" id="ea-i">
+    <div class="form-row">
+      <div class="field"><label>Bank name</label><input id="ea-bank" style="width:160px"></div>
+      <div class="field"><label>Account type</label><select id="ea-type" style="width:150px"><option>Checking</option><option>Savings</option><option>Money Market</option><option>Business Checking</option><option>Business Savings</option><option>Escrow</option><option>Other</option></select></div>
+      <div class="field"><label>Account nickname</label><input id="ea-nick" style="width:180px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Associated property</label><select id="ea-prop" style="width:190px"></select></div>
+      <div class="field"><label>Account number</label><input id="ea-acct" style="width:160px" autocomplete="off"></div>
+      <div class="field"><label>Routing number</label><input id="ea-route" style="width:170px" autocomplete="off"></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Notes</label><input id="ea-notes" style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delAcctFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-acct')">Cancel</button>
+      <button class="btn primary" onclick="saveEditAcct()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT LOAN MODAL -->
 <div class="modal-bg" id="modal-edit-loan">
   <div class="modal">
@@ -562,7 +588,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','ea-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -1176,6 +1202,43 @@ function addAccount(){
   save();fillSelects();renderAccounts();
   ['ac-bank','ac-nick','ac-acct','ac-route','ac-notes'].forEach(function(id){document.getElementById(id).value='';});
 }
+function openEditAcct(i){
+  var a=S.accounts[i];if(!a)return;
+  document.getElementById('ea-i').value=i;
+  document.getElementById('ea-bank').value=a.bank||'';
+  document.getElementById('ea-nick').value=a.nick||'';
+  document.getElementById('ea-acct').value=a.acct||'';
+  document.getElementById('ea-route').value=a.route||'';
+  document.getElementById('ea-notes').value=a.notes||'';
+  fillSelects();
+  document.getElementById('ea-type').value=a.type||'Checking';
+  // Set property
+  var propSel=document.getElementById('ea-prop');
+  if(propSel){
+    if(a.prop==='personal'){propSel.value='personal';}
+    else{Array.from(propSel.options).forEach(function(o){if(o.value==a.prop)o.selected=true;});}
+  }
+  openModal('edit-acct');
+}
+function saveEditAcct(){
+  var i=parseInt(document.getElementById('ea-i').value);
+  if(isNaN(i)||!S.accounts[i])return;
+  var acct=document.getElementById('ea-acct').value.trim();
+  S.accounts[i].bank=document.getElementById('ea-bank').value.trim();
+  S.accounts[i].type=document.getElementById('ea-type').value;
+  S.accounts[i].nick=document.getElementById('ea-nick').value.trim();
+  S.accounts[i].prop=document.getElementById('ea-prop').value;
+  S.accounts[i].acct=acct;
+  S.accounts[i].last4=acct.length>=4?acct.slice(-4):'';
+  S.accounts[i].route=document.getElementById('ea-route').value.trim();
+  S.accounts[i].notes=document.getElementById('ea-notes').value.trim();
+  save();closeModal('edit-acct');fillSelects();renderAccounts();
+}
+function delAcctFromModal(){
+  var i=parseInt(document.getElementById('ea-i').value);
+  if(!confirm('Remove this account?'))return;
+  S.accounts.splice(i,1);save();closeModal('edit-acct');fillSelects();renderAccounts();
+}
 function delAccount(i){
   if(!confirm('Remove this account? Associated transfers will remain.'))return;
   S.accounts.splice(i,1);save();fillSelects();renderAccounts();
@@ -1207,7 +1270,10 @@ function renderAccounts(){
           +'</div>'
           +(a.notes?'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+a.notes+'</div>':'')
           +'</div>'
+          +'<div style="display:flex;gap:6px">'
+          +'<button class="btn sm" onclick="openEditAcct('+a._i+')">Edit</button>'
           +'<button class="btn sm danger" onclick="delAccount('+a._i+')">Remove</button>'
+          +'</div>'
           +'</div>';
       }).join('')
       +'</div></div>';
