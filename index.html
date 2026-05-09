@@ -177,11 +177,10 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <div class="field"><label>Deductible</label><select id="e-ded" style="width:105px"><option value="yes">Yes</option><option value="no">No</option></select></div>
             <button class="btn primary" onclick="addExpense()">Add</button>
           </div>
-          <div class="form-row" id="mortgage-split-row" style="display:none;background:var(--bg3);padding:10px 12px;border-radius:var(--radius);margin-top:-4px">
-            <span style="font-size:12px;color:var(--amber)">&#9888; Enter interest portion to auto-split (or leave blank to use loan's interest %):</span>
+          <div class="form-row" id="mortgage-split-row" style="display:none;background:var(--bg3);padding:10px 12px;border-radius:var(--radius);margin-top:-4px;align-items:center;flex-wrap:wrap;gap:12px">
+            <span style="font-size:12px;color:var(--amber)">&#9888; Enter interest portion to auto-split (or leave blank to use loan&#39;s interest %):</span>
             <div class="field"><label>Interest portion ($)</label><input type="number" id="e-interest" placeholder="auto from loan" style="width:150px"></div>
-            <span style="font-size:12px;color:var(--text3);align-self:flex-end;padding-bottom:8px">Principal will be logged as non-deductible automatically</span>
-          <div style="display:none">
+            <span style="font-size:12px;color:var(--text3)">Principal logged as non-deductible automatically.</span>
           </div>
         </div></div>
       </div>
@@ -478,7 +477,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Property</label><select id="ee-prop" style="width:180px"></select></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Category</label><select id="ee-cat" style="width:200px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select></div>
+      <div class="field"><label>Category</label><select id="ee-cat" style="width:200px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select></div>
       <div class="field"><label>Deductible</label><select id="ee-ded" style="width:110px"><option value="yes">Yes</option><option value="no">No</option></select></div>
     </div>
     <div class="form-row">
