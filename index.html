@@ -231,6 +231,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="field"><label>Monthly payment</label><input type="number" id="l-pmt" placeholder="1900" style="width:125px"></div>
           <div class="field"><label>Interest % of payment</label><input type="number" id="l-ipct" placeholder="e.g. 78" step="0.1" style="width:130px" title="From your 1098 or amortization schedule — interest paid / total payments x 100"></div>
           <div class="field"><label>Next due</label><input type="date" id="l-due" style="width:138px"></div>
+          <div class="field"><label>Escrow (taxes &amp; ins.)</label><select id="l-escrow" style="width:140px"><option value="yes">Yes — escrowed</option><option value="no">No — I pay separately</option></select></div>
           <button class="btn primary" onclick="addLoan()">Add</button>
         </div>
       </div></div>
@@ -437,6 +438,36 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT LOAN MODAL -->
+<div class="modal-bg" id="modal-edit-loan">
+  <div class="modal">
+    <h3>Edit loan</h3>
+    <input type="hidden" id="el-i">
+    <div class="form-row">
+      <div class="field"><label>Property</label><select id="el-prop" style="width:170px"></select></div>
+      <div class="field"><label>Lender</label><input id="el-lender" style="width:120px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Original balance</label><input type="number" id="el-orig" style="width:130px"></div>
+      <div class="field"><label>Current balance</label><input type="number" id="el-bal" style="width:130px"></div>
+      <div class="field"><label>Rate (%)</label><input type="number" id="el-rate" step="0.01" style="width:80px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Monthly payment</label><input type="number" id="el-pmt" style="width:130px"></div>
+      <div class="field"><label>Interest % of payment</label><input type="number" id="el-ipct" step="0.1" style="width:130px" title="Interest paid ÷ total payments × 100"></div>
+      <div class="field"><label>Next due</label><input type="date" id="el-due" style="width:138px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Escrow (taxes &amp; insurance)</label><select id="el-escrow" style="width:200px"><option value="yes">Yes — escrowed</option><option value="no">No — I pay separately</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delLoanFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-loan')">Cancel</button>
+      <button class="btn primary" onclick="saveEditLoan()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT EXPENSE MODAL -->
 <div class="modal-bg" id="modal-edit-exp">
   <div class="modal">
@@ -532,7 +563,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','ee-prop','l-prop','t-prop','r-prop'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -826,11 +857,47 @@ function addLoan(){
   var pi=parseInt(document.getElementById('l-prop').value);
   var bal=parseFloat(document.getElementById('l-bal').value)||0;
   if(isNaN(pi)||!bal)return;
-  S.loans.push({propIdx:pi,lender:document.getElementById('l-lender').value.trim(),original:parseFloat(document.getElementById('l-orig').value)||0,balance:bal,rate:parseFloat(document.getElementById('l-rate').value)||0,payment:parseFloat(document.getElementById('l-pmt').value)||0,interestPct:parseFloat(document.getElementById('l-ipct').value)||0,due:document.getElementById('l-due').value});
+  S.loans.push({propIdx:pi,lender:document.getElementById('l-lender').value.trim(),original:parseFloat(document.getElementById('l-orig').value)||0,balance:bal,rate:parseFloat(document.getElementById('l-rate').value)||0,payment:parseFloat(document.getElementById('l-pmt').value)||0,interestPct:parseFloat(document.getElementById('l-ipct').value)||0,due:document.getElementById('l-due').value,escrow:document.getElementById('l-escrow').value});
   save();renderLoans();
   ['l-lender','l-orig','l-bal','l-rate','l-pmt','l-ipct','l-due'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('l-escrow').value='yes';
 }
 function delLoan(i){if(!confirm('Remove this loan?'))return;S.loans.splice(i,1);save();renderLoans();}
+function openEditLoan(i){
+  var l=S.loans[i];if(!l)return;
+  document.getElementById('el-i').value=i;
+  document.getElementById('el-lender').value=l.lender||'';
+  document.getElementById('el-orig').value=l.original||'';
+  document.getElementById('el-bal').value=l.balance||'';
+  document.getElementById('el-rate').value=l.rate||'';
+  document.getElementById('el-pmt').value=l.payment||'';
+  document.getElementById('el-ipct').value=l.interestPct||'';
+  document.getElementById('el-due').value=l.due||'';
+  document.getElementById('el-escrow').value=l.escrow||'yes';
+  fillSelects();
+  var propSel=document.getElementById('el-prop');
+  if(propSel)Array.from(propSel.options).forEach(function(o){if(parseInt(o.value)===l.propIdx)o.selected=true;});
+  openModal('edit-loan');
+}
+function saveEditLoan(){
+  var i=parseInt(document.getElementById('el-i').value);
+  if(isNaN(i)||!S.loans[i])return;
+  S.loans[i].propIdx=parseInt(document.getElementById('el-prop').value);
+  S.loans[i].lender=document.getElementById('el-lender').value.trim();
+  S.loans[i].original=parseFloat(document.getElementById('el-orig').value)||0;
+  S.loans[i].balance=parseFloat(document.getElementById('el-bal').value)||0;
+  S.loans[i].rate=parseFloat(document.getElementById('el-rate').value)||0;
+  S.loans[i].payment=parseFloat(document.getElementById('el-pmt').value)||0;
+  S.loans[i].interestPct=parseFloat(document.getElementById('el-ipct').value)||0;
+  S.loans[i].due=document.getElementById('el-due').value;
+  S.loans[i].escrow=document.getElementById('el-escrow').value;
+  save();closeModal('edit-loan');renderLoans();
+}
+function delLoanFromModal(){
+  var i=parseInt(document.getElementById('el-i').value);
+  if(!confirm('Remove this loan?'))return;
+  S.loans.splice(i,1);save();closeModal('edit-loan');renderLoans();
+}
 function renderLoans(){
   var el=document.getElementById('loan-list');
   if(!S.loans.length){el.innerHTML='<div class="empty">No loans added yet.</div>';return;}
@@ -846,7 +913,13 @@ function renderLoans(){
       +'<div style="font-size:12px;color:var(--text3);margin-top:3px">Next due: '+fd(l.due)+(dd2<0?' <span style="color:var(--red)">('+Math.abs(dd2)+'d overdue)</span>':dd2<=7?' <span style="color:var(--amber)">(in '+dd2+'d)</span>':'')+'</div>'
       +'<div style="margin-top:10px"><div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-bottom:3px">PAID OFF: '+pct+'%</div>'
       +'<div class="prog-track" style="width:220px"><div class="prog-fill" style="width:'+pct+'%"></div></div></div></div>'
-      +'<button class="btn sm danger" onclick="delLoan('+i+')">Remove</button></div>'
+      +'<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'
+      +'<span class="badge '+(l.escrow==='no'?'amber':'green')+'">'+(l.escrow==='no'?'No escrow — taxes &amp; ins. paid separately':'Taxes &amp; insurance escrowed')+'</span>'
+      +'</div></div>'
+      +'<div style="display:flex;flex-direction:column;gap:6px">'
+      +'<button class="btn sm" onclick="openEditLoan('+i+')">Edit</button>'
+      +'<button class="btn sm danger" onclick="delLoan('+i+')">Remove</button>'
+      +'</div></div>'
       +'</div></div>';
   }).join('');
 }
