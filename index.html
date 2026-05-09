@@ -117,6 +117,8 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   <div class="nav-item" onclick="nav('expenses',this)"><span class="nav-icon">$</span><span>Expenses</span></div>
   <div class="nav-item" onclick="nav('cashflow',this)"><span class="nav-icon">&#8652;</span><span>Cashflow</span></div>
   <div class="nav-item" onclick="nav('loans',this)"><span class="nav-icon">&#8856;</span><span>Loans</span></div>
+  <div class="nav-item" onclick="nav('accounts',this)"><span class="nav-icon">&#9774;</span><span>Accounts</span></div>
+  <div class="nav-item" onclick="nav('transfers',this)"><span class="nav-icon">&#8644;</span><span>Transfers</span></div>
   <div class="nav-section">Operations</div>
   <div class="nav-item" onclick="nav('tenants',this)"><span class="nav-icon">&#9823;</span><span>Tenants</span></div>
   <div class="nav-item" onclick="nav('rent',this)"><span class="nav-icon">&#10003;</span><span>Rent Log</span></div>
@@ -312,6 +314,56 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       </div></div>
     </div>
 
+    <!-- ACCOUNTS -->
+    <div id="accounts" class="section">
+      <div class="panel" style="margin-bottom:16px"><div class="panel-header"><span class="panel-title">Add account</span></div><div class="panel-body">
+        <div class="form-row">
+          <div class="field"><label>Bank name</label><input id="ac-bank" placeholder="Chase, Wells Fargo..." style="width:160px"></div>
+          <div class="field"><label>Account type</label><select id="ac-type" style="width:150px"><option>Checking</option><option>Savings</option><option>Money Market</option><option>Business Checking</option><option>Business Savings</option><option>Escrow</option><option>Other</option></select></div>
+          <div class="field"><label>Account nickname</label><input id="ac-nick" placeholder="e.g. Wembley Operating" style="width:180px"></div>
+          <div class="field"><label>Associated property</label><select id="ac-prop" style="width:180px"></select></div>
+          <div class="field"><label>Account number</label><input id="ac-acct" placeholder="Last 4 digits or full" style="width:160px" autocomplete="off"></div>
+          <div class="field"><label>Routing number</label><input id="ac-route" placeholder="9-digit routing number" style="width:170px" autocomplete="off"></div>
+          <button class="btn primary" onclick="addAccount()">Add</button>
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1"><label>Notes</label><input id="ac-notes" placeholder="Optional notes" style="width:100%"></div>
+        </div>
+      </div></div>
+      <div id="account-list"></div>
+    </div>
+
+    <!-- TRANSFERS -->
+    <div id="transfers" class="section">
+      <div class="panel" style="margin-bottom:16px"><div class="panel-header"><span class="panel-title">Log transfer</span></div><div class="panel-body">
+        <div class="form-row">
+          <div class="field"><label>Date</label><input type="date" id="tr-date" style="width:138px"></div>
+          <div class="field"><label>From account</label><select id="tr-from" style="width:200px"></select></div>
+          <div class="field"><label>To account</label><select id="tr-to" style="width:200px"></select></div>
+          <div class="field"><label>Amount ($)</label><input type="number" id="tr-amt" placeholder="0.00" style="width:120px"></div>
+          <div class="field"><label>Purpose</label><select id="tr-purpose" style="width:160px"><option>Rent proceeds</option><option>Expense reimbursement</option><option>Owner draw</option><option>Capital contribution</option><option>Mortgage payment</option><option>Reserve funding</option><option>Security deposit</option><option>Other</option></select></div>
+          <button class="btn primary" onclick="addTransfer()">Log</button>
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1"><label>Notes</label><input id="tr-notes" placeholder="Optional notes" style="width:100%"></div>
+        </div>
+      </div></div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Transfer history</span>
+          <div style="display:flex;gap:8px">
+            <select id="trf-acct" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderTransfers()"><option value="">All accounts</option></select>
+            <select id="trf-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderTransfers()"><option value="">All years</option></select>
+          </div>
+        </div>
+        <table><thead><tr><th>Date</th><th>From</th><th>To</th><th>Amount</th><th>Purpose</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="transfer-table"></tbody></table>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3);font-size:11px;font-family:monospace;color:var(--text3)">
+          Total shown: <strong id="tr-total" style="color:var(--text)">$0</strong>
+        </div>
+      </div>
+    </div>
+
     <!-- SETTINGS -->
     <div id="settings" class="section">
       <div class="panel" style="margin-bottom:16px"><div class="panel-header"><span class="panel-title">GitHub Gist sync — access from any device</span></div><div class="panel-body">
@@ -447,7 +499,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 </div>
 
 <script>
-var S={properties:[],expenses:[],loans:[],tenants:[],rentPayments:[],reminders:[]};
+var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
 function save(){try{localStorage.setItem('proptrack_v2',JSON.stringify(S));}catch(e){}}
 
@@ -459,7 +511,7 @@ var ini=function(n){return n?n.split(' ').map(function(w){return w[0];}).slice(0
 var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d;};
 var du=function(d){return d?Math.round((new Date(d+'T00:00')-tod())/86400000):999;};
 var CY=new Date().getFullYear();
-var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
+var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',accounts:'Accounts',transfers:'Transfers',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
 
 function nav(id,el){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
@@ -469,7 +521,7 @@ function nav(id,el){
   if(el){el.classList.add('active');}
   else{document.querySelectorAll('.nav-item').forEach(function(n){if(n.onclick&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+id+"'")>-1)n.classList.add('active');});}
   fillSelects();
-  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
+  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,accounts:renderAccounts,transfers:renderTransfers,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
   if(renders[id])renders[id]();
 }
 
@@ -494,6 +546,32 @@ function fillSelects(){
   }
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
+  // Accounts — property select including Personal
+  var acProp=document.getElementById('ac-prop');
+  if(acProp){
+    var prevAcProp=acProp.value;
+    acProp.innerHTML='<option value="personal">Personal</option>';
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);acProp.appendChild(o);});
+    acProp.value=prevAcProp||'personal';
+  }
+  // Transfer account selects
+  ['tr-from','tr-to','trf-acct'].forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    var isFilter=id==='trf-acct';
+    var prev=el.value;
+    el.innerHTML=isFilter?'<option value="">All accounts</option>':'<option value="">-- select account --</option>';
+    S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value=i;o.textContent=a.nick||a.bank+' '+a.type;el.appendChild(o);});
+    if(prev)el.value=prev;
+  });
+  // Transfer year filter
+  var trfy=document.getElementById('trf-yr');
+  if(trfy){
+    var prev=trfy.value;
+    trfy.innerHTML='<option value="">All years</option>';
+    var yrs=[...new Set(S.transfers.map(function(t){return t.date?t.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();
+    yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;trfy.appendChild(o);});
+    trfy.value=prev;
+  }
   ['rp-ten','rpf-ten'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     var isF=id.indexOf('f-')>-1;
@@ -995,6 +1073,115 @@ function updateSync(){
   else{if(dot)dot.className='sync-dot';if(lbl)lbl.textContent='Local only';}
   var ct=document.getElementById('cfg-token');if(ct)ct.value=g.token;
   var cg=document.getElementById('cfg-gist');if(cg)cg.value=g.id;
+}
+
+// ACCOUNTS
+function propLabel(val){
+  if(val==='personal'||val===undefined||val===null)return 'Personal';
+  var p=S.properties[parseInt(val)];return p?sh(p.address):'?';
+}
+function acctLabel(i){
+  var a=S.accounts[i];if(!a)return '?';
+  return (a.nick||a.bank+' '+a.type)+(a.last4?' ···'+a.last4:'');
+}
+function addAccount(){
+  var bank=document.getElementById('ac-bank').value.trim();
+  if(!bank)return;
+  var acct=document.getElementById('ac-acct').value.trim();
+  S.accounts.push({
+    bank:bank,
+    type:document.getElementById('ac-type').value,
+    nick:document.getElementById('ac-nick').value.trim(),
+    prop:document.getElementById('ac-prop').value,
+    acct:acct,
+    last4:acct.length>=4?acct.slice(-4):'',
+    route:document.getElementById('ac-route').value.trim(),
+    notes:document.getElementById('ac-notes').value.trim()
+  });
+  save();fillSelects();renderAccounts();
+  ['ac-bank','ac-nick','ac-acct','ac-route','ac-notes'].forEach(function(id){document.getElementById(id).value='';});
+}
+function delAccount(i){
+  if(!confirm('Remove this account? Associated transfers will remain.'))return;
+  S.accounts.splice(i,1);save();fillSelects();renderAccounts();
+}
+function renderAccounts(){
+  var el=document.getElementById('account-list');if(!el)return;
+  if(!S.accounts.length){el.innerHTML='<div class="empty">No accounts added yet.</div>';return;}
+  // Group by property
+  var groups={};
+  S.accounts.forEach(function(a,i){
+    var key=a.prop==='personal'?'__personal__':a.prop;
+    if(!groups[key])groups[key]=[];
+    groups[key].push(Object.assign({},a,{_i:i}));
+  });
+  var html2='';
+  Object.keys(groups).forEach(function(key){
+    var label=key==='__personal__'?'Personal':propLabel(key);
+    var accts=groups[key];
+    html2+='<div class="panel" style="margin-bottom:12px">'
+      +'<div class="panel-header"><span class="panel-title">'+label+'</span></div>'
+      +'<div style="padding:0">'
+      +accts.map(function(a){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border)">'
+          +'<div>'
+          +'<div style="font-weight:500;font-size:14px">'+(a.nick||a.bank+' '+a.type)+'</div>'
+          +'<div style="font-size:12px;color:var(--text2);font-family:monospace;margin-top:3px">'+a.bank+' &middot; '+a.type
+          +(a.last4?' &middot; Acct: <span style="color:var(--accent)">&bull;&bull;&bull;&bull; '+a.last4+'</span>':'')
+          +(a.route?' &middot; Routing: <span style="color:var(--text3)">'+a.route+'</span>':'')
+          +'</div>'
+          +(a.notes?'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+a.notes+'</div>':'')
+          +'</div>'
+          +'<button class="btn sm danger" onclick="delAccount('+a._i+')">Remove</button>'
+          +'</div>';
+      }).join('')
+      +'</div></div>';
+  });
+  el.innerHTML=html2;
+}
+
+// TRANSFERS
+function addTransfer(){
+  var from=document.getElementById('tr-from').value;
+  var to=document.getElementById('tr-to').value;
+  var amt=parseFloat(document.getElementById('tr-amt').value)||0;
+  var date=document.getElementById('tr-date').value;
+  if(!date||!amt||from===''||to==='')return;
+  S.transfers.push({
+    date:date,
+    from:parseInt(from),
+    to:parseInt(to),
+    amount:amt,
+    purpose:document.getElementById('tr-purpose').value,
+    notes:document.getElementById('tr-notes').value.trim()
+  });
+  save();fillSelects();renderTransfers();
+  ['tr-amt','tr-notes'].forEach(function(id){document.getElementById(id).value='';});
+}
+function delTransfer(i){S.transfers.splice(i,1);save();renderTransfers();}
+function renderTransfers(){
+  fillSelects();
+  var fa=document.getElementById('trf-acct')&&document.getElementById('trf-acct').value;
+  var fy=document.getElementById('trf-yr')&&document.getElementById('trf-yr').value;
+  var data=S.transfers.map(function(t,i){return Object.assign({},t,{_i:i});});
+  if(fa!==''&&fa!=null)data=data.filter(function(t){return t.from==fa||t.to==fa;});
+  if(fy)data=data.filter(function(t){return t.date&&t.date.startsWith(fy);});
+  data.sort(function(a,b){return b.date.localeCompare(a.date);});
+  var total=data.reduce(function(a,t){return a+t.amount;},0);
+  var tt=document.getElementById('tr-total');if(tt)tt.textContent=fm(total);
+  var tb=document.getElementById('transfer-table');if(!tb)return;
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No transfers logged yet.</td></tr>';return;}
+  tb.innerHTML=data.map(function(t){
+    return '<tr>'
+      +'<td style="font-family:monospace;font-size:12px;white-space:nowrap">'+fd(t.date)+'</td>'
+      +'<td style="color:var(--text2)">'+acctLabel(t.from)+'</td>'
+      +'<td style="color:var(--text2)">'+acctLabel(t.to)+'</td>'
+      +'<td style="font-family:monospace"><strong>'+fm(t.amount)+'</strong></td>'
+      +'<td><span class="badge gray">'+t.purpose+'</span></td>'
+      +'<td style="color:var(--text3)">'+(t.notes||'—')+'</td>'
+      +'<td><button class="btn icon-btn danger" onclick="delTransfer('+t._i+')">x</button></td>'
+      +'</tr>';
+  }).join('');
 }
 
 // ZILLOW HELPERS
