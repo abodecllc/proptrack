@@ -169,11 +169,17 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="form-row">
             <div class="field"><label>Date</label><input type="date" id="e-date" style="width:138px"></div>
             <div class="field"><label>Property</label><select id="e-prop" style="width:160px"></select></div>
-            <div class="field"><label>Category</label><select id="e-cat" style="width:180px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage interest</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select></div>
+            <div class="field"><label>Category</label><select id="e-cat" style="width:180px" onchange="toggleMortgageRow(this.value)"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage interest</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select></div>
             <div class="field"><label>Description</label><input id="e-desc" placeholder="Brief note" style="width:150px"></div>
             <div class="field"><label>Amount ($)</label><input type="number" id="e-amt" placeholder="0.00" style="width:100px"></div>
             <div class="field"><label>Deductible</label><select id="e-ded" style="width:105px"><option value="yes">Yes</option><option value="no">No</option></select></div>
             <button class="btn primary" onclick="addExpense()">Add</button>
+          </div>
+          <div class="form-row" id="mortgage-split-row" style="display:none;background:var(--bg3);padding:10px 12px;border-radius:var(--radius);margin-top:-4px">
+            <span style="font-size:12px;color:var(--amber)">&#9888; Mortgage payment:</span>
+            <div class="field"><label>Interest portion ($)</label><input type="number" id="e-interest" placeholder="auto from loan" style="width:150px"></div>
+            <span style="font-size:12px;color:var(--text3);align-self:flex-end;padding-bottom:8px">Principal will be logged as non-deductible automatically</span>
+          <div style="display:none">
           </div>
         </div></div>
       </div>
@@ -219,6 +225,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="field"><label>Current balance</label><input type="number" id="l-bal" placeholder="275000" style="width:130px"></div>
           <div class="field"><label>Rate (%)</label><input type="number" id="l-rate" placeholder="6.5" step="0.01" style="width:80px"></div>
           <div class="field"><label>Monthly payment</label><input type="number" id="l-pmt" placeholder="1900" style="width:125px"></div>
+          <div class="field"><label>Interest % of payment</label><input type="number" id="l-ipct" placeholder="e.g. 78" step="0.1" style="width:130px" title="From your 1098 or amortization schedule — interest paid / total payments x 100"></div>
           <div class="field"><label>Next due</label><input type="date" id="l-due" style="width:138px"></div>
           <button class="btn primary" onclick="addLoan()">Add</button>
         </div>
@@ -376,6 +383,33 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT EXPENSE MODAL -->
+<div class="modal-bg" id="modal-edit-exp">
+  <div class="modal">
+    <h3>Edit expense</h3>
+    <input type="hidden" id="ee-i">
+    <div class="form-row">
+      <div class="field"><label>Date</label><input type="date" id="ee-date" style="width:138px"></div>
+      <div class="field"><label>Property</label><select id="ee-prop" style="width:180px"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Category</label><select id="ee-cat" style="width:200px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select></div>
+      <div class="field"><label>Deductible</label><select id="ee-ded" style="width:110px"><option value="yes">Yes</option><option value="no">No</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Description</label><input id="ee-desc" style="width:100%"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Amount ($)</label><input type="number" id="ee-amt" style="width:140px"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delExpFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-exp')">Cancel</button>
+      <button class="btn primary" onclick="saveEditExp()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT PROPERTY MODAL -->
 <div class="modal-bg" id="modal-edit-prop">
   <div class="modal">
@@ -444,7 +478,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','l-prop','t-prop','r-prop'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','t-prop','r-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -576,12 +610,71 @@ function addExpense(){
   var pi=parseInt(document.getElementById('e-prop').value);
   var d=document.getElementById('e-date').value;
   var a=parseFloat(document.getElementById('e-amt').value)||0;
+  var cat=document.getElementById('e-cat').value;
+  var desc=document.getElementById('e-desc').value.trim();
   if(!d||isNaN(pi)||!a)return;
-  S.expenses.push({propIdx:pi,date:d,category:document.getElementById('e-cat').value,desc:document.getElementById('e-desc').value.trim(),amount:a,deductible:document.getElementById('e-ded').value});
-  save();fillSelects();renderExp();
-  ['e-date','e-amt','e-desc'].forEach(function(id){document.getElementById(id).value='';});
+  if(cat==='Mortgage interest'){
+    var interestEl=document.getElementById('e-interest');
+    var interest=interestEl?parseFloat(interestEl.value)||0:0;
+    if(interest<=0){
+      var loan=S.loans.find(function(l){return l.propIdx==pi;});
+      if(loan&&loan.interestPct){interest=Math.round(a*(loan.interestPct/100)*100)/100;}
+    }
+    if(interest>0&&interest<a){
+      var principal=Math.round((a-interest)*100)/100;
+      S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:desc||'Mortgage - interest portion',amount:Math.round(interest*100)/100,deductible:'yes'});
+      S.expenses.push({propIdx:pi,date:d,category:'Mortgage principal',desc:desc||'Mortgage - principal portion',amount:principal,deductible:'no'});
+    } else {
+      S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:(desc||'Mortgage payment')+' [enter interest portion to split]',amount:a,deductible:'yes'});
+    }
+  } else {
+    S.expenses.push({propIdx:pi,date:d,category:cat,desc:desc,amount:a,deductible:document.getElementById('e-ded').value});
+  }
+  save();renderExp();fillSelects();
+  ['e-date','e-amt','e-desc','e-interest'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  toggleMortgageRow('');
+  document.getElementById('e-cat').value='Repairs & maintenance';
 }
 function delExp(i){S.expenses.splice(i,1);save();renderExp();}
+function openEditExp(i){
+  var e=S.expenses[i];if(!e)return;
+  document.getElementById('ee-i').value=i;
+  document.getElementById('ee-date').value=e.date||'';
+  document.getElementById('ee-desc').value=e.desc||'';
+  document.getElementById('ee-amt').value=e.amount||'';
+  document.getElementById('ee-ded').value=e.deductible||'yes';
+  fillSelects();
+  // Set property dropdown — find by address match
+  var pp=S.properties[e.propIdx];
+  var ppSel=document.getElementById('ee-prop');
+  if(pp&&ppSel){
+    Array.from(ppSel.options).forEach(function(o){if(parseInt(o.value)===e.propIdx)o.selected=true;});
+  }
+  // Set category
+  var catSel=document.getElementById('ee-cat');
+  if(catSel)catSel.value=e.category||'Other deductible';
+  openModal('edit-exp');
+}
+function saveEditExp(){
+  var i=parseInt(document.getElementById('ee-i').value);
+  if(isNaN(i)||!S.expenses[i])return;
+  S.expenses[i].date=document.getElementById('ee-date').value;
+  S.expenses[i].propIdx=parseInt(document.getElementById('ee-prop').value);
+  S.expenses[i].category=document.getElementById('ee-cat').value;
+  S.expenses[i].desc=document.getElementById('ee-desc').value.trim();
+  S.expenses[i].amount=parseFloat(document.getElementById('ee-amt').value)||0;
+  S.expenses[i].deductible=document.getElementById('ee-ded').value;
+  save();closeModal('edit-exp');renderExp();
+}
+function delExpFromModal(){
+  var i=parseInt(document.getElementById('ee-i').value);
+  if(!confirm('Delete this expense?'))return;
+  S.expenses.splice(i,1);save();closeModal('edit-exp');renderExp();
+}
+function toggleMortgageRow(cat){
+  var row=document.getElementById('mortgage-split-row');
+  if(row)row.style.display=(cat==='Mortgage interest')?'flex':'none';
+}
 function renderExp(){
   var fp=document.getElementById('ef-prop')&&document.getElementById('ef-prop').value;
   var fd2=document.getElementById('ef-ded')&&document.getElementById('ef-ded').value;
@@ -600,7 +693,7 @@ function renderExp(){
   if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No expenses found.</td></tr>';}
   else tb.innerHTML=data.map(function(e){
     var pn=sh(S.properties[e.propIdx]&&S.properties[e.propIdx].address||'?');
-    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td>'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span></td><td><button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
+    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.desc||'')+'">'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span></td><td style="white-space:nowrap"><button class="btn icon-btn" onclick="openEditExp('+e._i+')">&#9998;</button> <button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
   }).join('');
   var ded=S.expenses.filter(function(e){return e.deductible==='yes';}).reduce(function(a,e){return a+e.amount;},0);
   var nded=S.expenses.filter(function(e){return e.deductible==='no';}).reduce(function(a,e){return a+e.amount;},0);
@@ -652,9 +745,9 @@ function addLoan(){
   var pi=parseInt(document.getElementById('l-prop').value);
   var bal=parseFloat(document.getElementById('l-bal').value)||0;
   if(isNaN(pi)||!bal)return;
-  S.loans.push({propIdx:pi,lender:document.getElementById('l-lender').value.trim(),original:parseFloat(document.getElementById('l-orig').value)||0,balance:bal,rate:parseFloat(document.getElementById('l-rate').value)||0,payment:parseFloat(document.getElementById('l-pmt').value)||0,due:document.getElementById('l-due').value});
+  S.loans.push({propIdx:pi,lender:document.getElementById('l-lender').value.trim(),original:parseFloat(document.getElementById('l-orig').value)||0,balance:bal,rate:parseFloat(document.getElementById('l-rate').value)||0,payment:parseFloat(document.getElementById('l-pmt').value)||0,interestPct:parseFloat(document.getElementById('l-ipct').value)||0,due:document.getElementById('l-due').value});
   save();renderLoans();
-  ['l-lender','l-orig','l-bal','l-rate','l-pmt','l-due'].forEach(function(id){document.getElementById(id).value='';});
+  ['l-lender','l-orig','l-bal','l-rate','l-pmt','l-ipct','l-due'].forEach(function(id){document.getElementById(id).value='';});
 }
 function delLoan(i){if(!confirm('Remove this loan?'))return;S.loans.splice(i,1);save();renderLoans();}
 function renderLoans(){
@@ -668,7 +761,7 @@ function renderLoans(){
     return '<div class="panel" style="margin-bottom:10px"><div class="panel-body">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
       +'<div><div style="font-weight:500;font-size:15px;margin-bottom:4px">'+pn+' &mdash; '+(l.lender||'Lender')+'</div>'
-      +'<div style="font-size:12px;color:var(--text2);font-family:\'DM Mono\',monospace">Balance: <span style="color:var(--text)">'+fm(l.balance)+'</span> &middot; Rate: '+l.rate+'% &middot; Payment: '+fm(l.payment)+'/mo &middot; LTV: '+ltv+'%</div>'
+      +'<div style="font-size:12px;color:var(--text2);font-family:\'DM Mono\',monospace">Balance: <span style="color:var(--text)">'+fm(l.balance)+'</span> &middot; Rate: '+l.rate+'% &middot; Payment: '+fm(l.payment)+'/mo &middot; LTV: '+ltv+'%'+(l.interestPct?' &middot; Interest: '+l.interestPct+'%':' &middot; <span style="color:var(--amber)">Set interest % for auto-split</span>')+'</div>'
       +'<div style="font-size:12px;color:var(--text3);margin-top:3px">Next due: '+fd(l.due)+(dd2<0?' <span style="color:var(--red)">('+Math.abs(dd2)+'d overdue)</span>':dd2<=7?' <span style="color:var(--amber)">(in '+dd2+'d)</span>':'')+'</div>'
       +'<div style="margin-top:10px"><div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-bottom:3px">PAID OFF: '+pct+'%</div>'
       +'<div class="prog-track" style="width:220px"><div class="prog-fill" style="width:'+pct+'%"></div></div></div></div>'
