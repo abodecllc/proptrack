@@ -546,32 +546,33 @@ function fillSelects(){
   }
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
-  // Accounts — property select including Personal
-  var acProp=document.getElementById('ac-prop');
-  if(acProp){
-    var prevAcProp=acProp.value;
-    acProp.innerHTML='<option value="personal">Personal</option>';
-    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);acProp.appendChild(o);});
-    acProp.value=prevAcProp||'personal';
-  }
-  // Transfer account selects
-  ['tr-from','tr-to','trf-acct'].forEach(function(id){
-    var el=document.getElementById(id);if(!el)return;
-    var isFilter=id==='trf-acct';
-    var prev=el.value;
-    el.innerHTML=isFilter?'<option value="">All accounts</option>':'<option value="">-- select account --</option>';
-    S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value=i;o.textContent=a.nick||a.bank+' '+a.type;el.appendChild(o);});
-    if(prev)el.value=prev;
-  });
-  // Transfer year filter
-  var trfy=document.getElementById('trf-yr');
-  if(trfy){
-    var prev=trfy.value;
-    trfy.innerHTML='<option value="">All years</option>';
-    var yrs=[...new Set(S.transfers.map(function(t){return t.date?t.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();
-    yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;trfy.appendChild(o);});
-    trfy.value=prev;
-  }
+  // Accounts + Transfers selects — wrapped in try/catch since these elements
+  // only exist on their respective pages and may not be in the DOM yet
+  try{
+    var acProp=document.getElementById('ac-prop');
+    if(acProp){
+      var prevAcProp=acProp.value;
+      acProp.innerHTML='<option value="personal">Personal</option>';
+      S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);acProp.appendChild(o);});
+      acProp.value=prevAcProp||'personal';
+    }
+    ['tr-from','tr-to','trf-acct'].forEach(function(sid){
+      var el=document.getElementById(sid);if(!el)return;
+      var isFilter=sid==='trf-acct';
+      var sprev=el.value;
+      el.innerHTML=isFilter?'<option value="">All accounts</option>':'<option value="">-- select account --</option>';
+      S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value=i;o.textContent=a.nick||a.bank+' '+a.type;el.appendChild(o);});
+      if(sprev)el.value=sprev;
+    });
+    var trfy=document.getElementById('trf-yr');
+    if(trfy){
+      var tprev=trfy.value;
+      trfy.innerHTML='<option value="">All years</option>';
+      var tyrs=[...new Set(S.transfers.map(function(t){return t.date?t.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();
+      tyrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;trfy.appendChild(o);});
+      trfy.value=tprev;
+    }
+  }catch(e){}
   ['rp-ten','rpf-ten'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     var isF=id.indexOf('f-')>-1;
