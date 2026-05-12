@@ -199,6 +199,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <select id="ef-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="this.dataset.selectedAddr=this.value;renderExp()"><option value="">All properties</option></select>
             <select id="ef-ded" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All types</option><option value="yes">Deductible</option><option value="no">Non-ded.</option></select>
             <select id="ef-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All years</option></select>
+            <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select>
           </div>
         </div>
         <table><thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Type</th><th></th></tr></thead><tbody id="exp-table"></tbody></table>
@@ -999,6 +1000,12 @@ function renderExp(){
   }
   if(fd2)data=data.filter(function(e){return e.deductible===fd2;});
   if(fy)data=data.filter(function(e){return e.date&&e.date.startsWith(fy);});
+  var fc=document.getElementById('ef-cat')&&document.getElementById('ef-cat').value;
+  if(fc==='__mortgage__'){
+    data=data.filter(function(e){return e.category==='Mortgage interest'||e.category==='Mortgage principal'||e.category==='Mortgage payment';});
+  } else if(fc){
+    data=data.filter(function(e){return e.category===fc;});
+  }
   data.sort(function(a,b){return b.date.localeCompare(a.date);});
   var tb=document.getElementById('exp-table');
   if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No expenses found.</td></tr>';}
