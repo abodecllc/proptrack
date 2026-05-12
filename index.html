@@ -1447,6 +1447,63 @@ function delQuoteFromModal(){
   if(!confirm('Delete this quote?'))return;
   S.quotes.splice(i,1);save();closeModal('edit-quote');renderVendors();
 }
+function quoteToExpense(i){
+  var q=S.quotes[i];if(!q)return;
+  var v=S.vendors[q.vendorIdx];
+  // Navigate to expenses tab
+  var expNav=Array.from(document.querySelectorAll('.nav-item')).find(function(n){return n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'expenses'")>-1;});
+  nav('expenses',expNav);
+  // Switch to manual entry tab
+  var manualTab=document.querySelector('.tab');
+  if(manualTab){expTab('manual',manualTab);}
+  // Pre-fill the form
+  setTimeout(function(){
+    // Date — use quote date as default
+    var dateEl=document.getElementById('e-date');
+    if(dateEl)dateEl.value=q.date||new Date().toISOString().slice(0,10);
+    // Property
+    var propEl=document.getElementById('e-prop');
+    if(propEl&&q.propAddr!==''&&q.propAddr!==undefined){propEl.value=parseInt(q.propAddr);}
+    // Description — vendor name + service
+    var descEl=document.getElementById('e-desc');
+    if(descEl)descEl.value=(v?v.name+' — ':'')+q.desc;
+    // Amount
+    var amtEl=document.getElementById('e-amt');
+    if(amtEl)amtEl.value=q.amount||'';
+    // Category — map trade to expense category
+    var catEl=document.getElementById('e-cat');
+    if(catEl){
+      var tradeMap={
+        'HVAC':'Repairs & maintenance',
+        'Plumbing':'Repairs & maintenance',
+        'Electrical':'Repairs & maintenance',
+        'General handyman':'Repairs & maintenance',
+        'Painter':'Repairs & maintenance',
+        'Roofer':'Repairs & maintenance',
+        'Landscaping':'Repairs & maintenance',
+        'Appliance repair':'Repairs & maintenance',
+        'Pest control':'Repairs & maintenance',
+        'Flooring':'Capital improvement',
+        'Masonry':'Capital improvement',
+        'Cleaning':'Repairs & maintenance',
+        'Snow removal':'Repairs & maintenance',
+        'Attorney':'Professional fees',
+        'Accountant':'Professional fees',
+        'Property manager':'Property management',
+        'Inspector':'Professional fees'
+      };
+      var trade=v?v.trade:'';
+      catEl.value=tradeMap[trade]||'Repairs & maintenance';
+    }
+    // Deductible — default yes
+    var dedEl=document.getElementById('e-ded');
+    if(dedEl)dedEl.value='yes';
+    // Scroll to form and highlight amount field
+    var panel=document.querySelector('#exp-manual .panel');
+    if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});
+    if(amtEl){amtEl.style.outline='2px solid var(--accent)';amtEl.focus();setTimeout(function(){amtEl.style.outline='';},2000);}
+  },100);
+}
 function toggleHired(i){
   S.quotes[i].hired=S.quotes[i].hired==='yes'?'no':'yes';
   save();renderVendors();
@@ -1511,7 +1568,10 @@ function renderVendors(){
         +'<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(q.notes||'')+'">'+q.desc+'</td>'
         +'<td style="font-family:monospace;text-align:right"><strong>'+fm(q.amount)+'</strong></td>'
         +'<td><span onclick="toggleHired('+q._i+')" style="cursor:pointer" title="Click to toggle">'+hiredBadge+'</span></td>'
-        +'<td><button class="btn icon-btn" onclick="openEditQuote('+q._i+')">&#9998;</button></td>'
+        +'<td style="white-space:nowrap">'
+        +(q.hired==='yes'?'<button class="btn sm" onclick="quoteToExpense('+q._i+')" style="color:var(--green);margin-right:4px" title="Pre-fill Expenses with this quote">+ Expense</button>':'')
+        +'<button class="btn icon-btn" onclick="openEditQuote('+q._i+')">&#9998;</button>'
+        +'</td>'
         +'</tr>';
     }).join('');
   }
