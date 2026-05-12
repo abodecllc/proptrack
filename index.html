@@ -120,6 +120,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   <div class="nav-item" onclick="nav('accounts',this)"><span class="nav-icon">&#9774;</span><span>Accounts</span></div>
   <div class="nav-item" onclick="nav('transfers',this)"><span class="nav-icon">&#8644;</span><span>Transfers</span></div>
   <div class="nav-section">Operations</div>
+  <div class="nav-item" onclick="nav('vendors',this)"><span class="nav-icon">&#9874;</span><span>Vendors</span></div>
   <div class="nav-item" onclick="nav('tenants',this)"><span class="nav-icon">&#9823;</span><span>Tenants</span></div>
   <div class="nav-item" onclick="nav('rent',this)"><span class="nav-icon">&#10003;</span><span>Rent Log</span></div>
   <div class="nav-item" onclick="nav('reminders',this)"><span class="nav-icon">&#9711;</span><span>Reminders</span></div>
@@ -316,6 +317,95 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       </div></div>
     </div>
 
+    <!-- VENDORS -->
+    <div id="vendors" class="section">
+
+      <!-- Add vendor panel -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header"><span class="panel-title">Add vendor</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="field"><label>Company / Name</label><input id="v-name" placeholder="ABC Plumbing" style="width:180px"></div>
+            <div class="field"><label>Trade / Category</label><select id="v-trade" style="width:170px">
+              <option>HVAC</option><option>Plumbing</option><option>Electrical</option>
+              <option>General handyman</option><option>Painter</option><option>Roofer</option>
+              <option>Landscaping</option><option>Appliance repair</option><option>Pest control</option>
+              <option>Flooring</option><option>Masonry</option><option>Cleaning</option>
+              <option>Snow removal</option><option>Attorney</option><option>Accountant</option>
+              <option>Property manager</option><option>Inspector</option><option>Other</option>
+            </select></div>
+            <div class="field"><label>Contact name</label><input id="v-contact" placeholder="John Smith" style="width:150px"></div>
+            <div class="field"><label>Phone</label><input id="v-phone" placeholder="(555) 000-0000" style="width:145px"></div>
+            <div class="field"><label>Email</label><input id="v-email" placeholder="email@example.com" style="width:180px"></div>
+          </div>
+          <div class="form-row">
+            <div class="field" style="flex:1"><label>Notes (license #, referral source, etc.)</label><input id="v-notes" placeholder="Optional" style="width:100%"></div>
+            <button class="btn primary" onclick="addVendor()">Add vendor</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add quote panel -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header"><span class="panel-title">Add quote</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="field"><label>Vendor</label><select id="q-vendor" style="width:200px"></select></div>
+            <div class="field"><label>Property</label><select id="q-prop" style="width:170px"></select></div>
+            <div class="field"><label>Service description</label><input id="q-desc" placeholder="Replace water heater" style="width:220px"></div>
+            <div class="field"><label>Quote amount ($)</label><input type="number" id="q-amt" placeholder="0.00" style="width:130px"></div>
+            <div class="field"><label>Date quoted</label><input type="date" id="q-date" style="width:138px"></div>
+            <div class="field"><label>Hired?</label><select id="q-hired" style="width:100px"><option value="no">No</option><option value="yes">Yes — hired</option></select></div>
+            <button class="btn primary" onclick="addQuote()">Add quote</button>
+          </div>
+          <div class="form-row">
+            <div class="field" style="flex:1"><label>Notes</label><input id="q-notes" placeholder="Optional" style="width:100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quote list + filters -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Quotes</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="qf-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderVendors()"><option value="">All properties</option></select>
+            <select id="qf-trade" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderVendors()">
+              <option value="">All trades</option>
+              <option>HVAC</option><option>Plumbing</option><option>Electrical</option>
+              <option>General handyman</option><option>Painter</option><option>Roofer</option>
+              <option>Landscaping</option><option>Appliance repair</option><option>Pest control</option>
+              <option>Flooring</option><option>Masonry</option><option>Cleaning</option>
+              <option>Snow removal</option><option>Attorney</option><option>Accountant</option>
+              <option>Property manager</option><option>Inspector</option><option>Other</option>
+            </select>
+            <select id="qf-hired" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderVendors()">
+              <option value="">All</option>
+              <option value="yes">Hired only</option>
+              <option value="no">Not hired</option>
+            </select>
+            <select id="qf-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderVendors()"><option value="">All years</option></select>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Vendor</th><th>Trade</th><th>Property</th><th>Service</th><th style="text-align:right">Quote</th><th>Status</th><th></th></tr></thead>
+          <tbody id="quote-table"></tbody>
+        </table>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3);display:flex;gap:24px">
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Showing: <strong id="q-count" style="color:var(--text)">0</strong> quotes</span>
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Total quoted: <strong id="q-total" style="color:var(--text)">$0</strong></span>
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Hired total: <strong id="q-hired-total" style="color:var(--green)">$0</strong></span>
+        </div>
+      </div>
+
+      <!-- Vendor directory -->
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header"><span class="panel-title">Vendor directory</span></div>
+        <div id="vendor-directory"></div>
+      </div>
+
+    </div>
+
     <!-- ACCOUNTS -->
     <div id="accounts" class="section">
       <div class="panel" style="margin-bottom:16px"><div class="panel-header"><span class="panel-title">Add account</span></div><div class="panel-body">
@@ -433,6 +523,66 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn" onclick="closeModal('add-prop')">Cancel</button>
       <button class="btn primary" onclick="addProp()">Add property</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT QUOTE MODAL -->
+<div class="modal-bg" id="modal-edit-quote">
+  <div class="modal">
+    <h3>Edit quote</h3>
+    <input type="hidden" id="eq-i">
+    <div class="form-row">
+      <div class="field"><label>Vendor</label><select id="eq-vendor" style="width:200px"></select></div>
+      <div class="field"><label>Property</label><select id="eq-prop" style="width:170px"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Service description</label><input id="eq-desc" style="width:100%"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Quote amount ($)</label><input type="number" id="eq-amt" style="width:130px"></div>
+      <div class="field"><label>Date quoted</label><input type="date" id="eq-date" style="width:138px"></div>
+      <div class="field"><label>Hired?</label><select id="eq-hired" style="width:120px"><option value="no">No</option><option value="yes">Yes — hired</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Notes</label><input id="eq-notes" style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delQuoteFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-quote')">Cancel</button>
+      <button class="btn primary" onclick="saveEditQuote()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT VENDOR MODAL -->
+<div class="modal-bg" id="modal-edit-vendor">
+  <div class="modal">
+    <h3>Edit vendor</h3>
+    <input type="hidden" id="ev-i">
+    <div class="form-row">
+      <div class="field"><label>Company / Name</label><input id="ev-name" style="width:180px"></div>
+      <div class="field"><label>Trade / Category</label><select id="ev-trade" style="width:170px">
+        <option>HVAC</option><option>Plumbing</option><option>Electrical</option>
+        <option>General handyman</option><option>Painter</option><option>Roofer</option>
+        <option>Landscaping</option><option>Appliance repair</option><option>Pest control</option>
+        <option>Flooring</option><option>Masonry</option><option>Cleaning</option>
+        <option>Snow removal</option><option>Attorney</option><option>Accountant</option>
+        <option>Property manager</option><option>Inspector</option><option>Other</option>
+      </select></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Contact name</label><input id="ev-contact" style="width:150px"></div>
+      <div class="field"><label>Phone</label><input id="ev-phone" style="width:145px"></div>
+      <div class="field"><label>Email</label><input id="ev-email" style="width:180px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Notes</label><input id="ev-notes" style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delVendorFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-vendor')">Cancel</button>
+      <button class="btn primary" onclick="saveEditVendor()">Save changes</button>
     </div>
   </div>
 </div>
@@ -557,7 +707,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 </div>
 
 <script>
-var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],tenants:[],rentPayments:[],reminders:[]};
+var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
 function save(){try{localStorage.setItem('proptrack_v2',JSON.stringify(S));}catch(e){}}
 
@@ -569,7 +719,7 @@ var ini=function(n){return n?n.split(' ').map(function(w){return w[0];}).slice(0
 var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d;};
 var du=function(d){return d?Math.round((new Date(d+'T00:00')-tod())/86400000):999;};
 var CY=new Date().getFullYear();
-var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',accounts:'Accounts',transfers:'Transfers',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
+var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',accounts:'Accounts',transfers:'Transfers',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
 
 function nav(id,el){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
@@ -579,7 +729,7 @@ function nav(id,el){
   if(el){el.classList.add('active');}
   else{document.querySelectorAll('.nav-item').forEach(function(n){if(n.onclick&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+id+"'")>-1)n.classList.add('active');});}
   fillSelects();
-  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,accounts:renderAccounts,transfers:renderTransfers,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
+  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,accounts:renderAccounts,transfers:renderTransfers,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
   if(renders[id])renders[id]();
 }
 
@@ -588,7 +738,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','ea-prop'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','ea-prop','eq-prop','eq-vendor'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -606,6 +756,30 @@ function fillSelects(){
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
   // Accounts + Transfers selects — wrapped in try/catch since these elements
   // only exist on their respective pages and may not be in the DOM yet
+  // Vendor quote property filter
+  var qfProp=document.getElementById('qf-prop');
+  if(qfProp){
+    var qfpv=qfProp.value;
+    qfProp.innerHTML='<option value="">All properties</option>';
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=p.address;o.textContent=sh(p.address);qfProp.appendChild(o);});
+    qfProp.value=qfpv;
+  }
+  // Quote add form — property select
+  var qProp=document.getElementById('q-prop');
+  if(qProp){
+    var qpv=qProp.value;
+    qProp.innerHTML='<option value="">All / general</option>';
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);qProp.appendChild(o);});
+    if(qpv)qProp.value=qpv;
+  }
+  // Quote add form — vendor select
+  var qVendor=document.getElementById('q-vendor');
+  if(qVendor){
+    var qvv=qVendor.value;
+    qVendor.innerHTML='<option value="">-- select vendor --</option>';
+    S.vendors.forEach(function(v,i){var o=document.createElement('option');o.value=i;o.textContent=v.name+(v.trade?' ('+v.trade+')':'');qVendor.appendChild(o);});
+    if(qvv)qVendor.value=qvv;
+  }
   try{
     var acProp=document.getElementById('ac-prop');
     if(acProp){
@@ -1174,6 +1348,205 @@ function updateSync(){
   else{if(dot)dot.className='sync-dot';if(lbl)lbl.textContent='Local only';}
   var ct=document.getElementById('cfg-token');if(ct)ct.value=g.token;
   var cg=document.getElementById('cfg-gist');if(cg)cg.value=g.id;
+}
+
+// VENDORS
+function addVendor(){
+  var name=document.getElementById('v-name').value.trim();
+  if(!name)return;
+  S.vendors.push({
+    name:name,
+    trade:document.getElementById('v-trade').value,
+    contact:document.getElementById('v-contact').value.trim(),
+    phone:document.getElementById('v-phone').value.trim(),
+    email:document.getElementById('v-email').value.trim(),
+    notes:document.getElementById('v-notes').value.trim()
+  });
+  save();fillSelects();renderVendors();
+  ['v-name','v-contact','v-phone','v-email','v-notes'].forEach(function(id){document.getElementById(id).value='';});
+}
+function openEditVendor(i){
+  var v=S.vendors[i];if(!v)return;
+  document.getElementById('ev-i').value=i;
+  document.getElementById('ev-name').value=v.name||'';
+  document.getElementById('ev-trade').value=v.trade||'HVAC';
+  document.getElementById('ev-contact').value=v.contact||'';
+  document.getElementById('ev-phone').value=v.phone||'';
+  document.getElementById('ev-email').value=v.email||'';
+  document.getElementById('ev-notes').value=v.notes||'';
+  openModal('edit-vendor');
+}
+function saveEditVendor(){
+  var i=parseInt(document.getElementById('ev-i').value);
+  if(isNaN(i)||!S.vendors[i])return;
+  S.vendors[i].name=document.getElementById('ev-name').value.trim();
+  S.vendors[i].trade=document.getElementById('ev-trade').value;
+  S.vendors[i].contact=document.getElementById('ev-contact').value.trim();
+  S.vendors[i].phone=document.getElementById('ev-phone').value.trim();
+  S.vendors[i].email=document.getElementById('ev-email').value.trim();
+  S.vendors[i].notes=document.getElementById('ev-notes').value.trim();
+  save();closeModal('edit-vendor');fillSelects();renderVendors();
+}
+function delVendorFromModal(){
+  var i=parseInt(document.getElementById('ev-i').value);
+  if(!confirm('Remove this vendor? Their quotes will remain.'))return;
+  S.vendors.splice(i,1);save();closeModal('edit-vendor');fillSelects();renderVendors();
+}
+
+function addQuote(){
+  var vi=parseInt(document.getElementById('q-vendor').value);
+  var desc=document.getElementById('q-desc').value.trim();
+  var amt=parseFloat(document.getElementById('q-amt').value)||0;
+  var date=document.getElementById('q-date').value;
+  if(isNaN(vi)||!desc||!date)return;
+  var pi=document.getElementById('q-prop').value;
+  S.quotes.push({
+    vendorIdx:vi,
+    propAddr:pi,
+    desc:desc,
+    amount:amt,
+    date:date,
+    hired:document.getElementById('q-hired').value,
+    notes:document.getElementById('q-notes').value.trim()
+  });
+  save();renderVendors();
+  ['q-desc','q-amt','q-notes'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('q-hired').value='no';
+}
+function openEditQuote(i){
+  var q=S.quotes[i];if(!q)return;
+  document.getElementById('eq-i').value=i;
+  document.getElementById('eq-desc').value=q.desc||'';
+  document.getElementById('eq-amt').value=q.amount||'';
+  document.getElementById('eq-date').value=q.date||'';
+  document.getElementById('eq-hired').value=q.hired||'no';
+  document.getElementById('eq-notes').value=q.notes||'';
+  fillSelects();
+  // Set vendor
+  var vs=document.getElementById('eq-vendor');
+  if(vs){vs.innerHTML='<option value="">-- select vendor --</option>';S.vendors.forEach(function(v,i){var o=document.createElement('option');o.value=i;o.textContent=v.name+(v.trade?' ('+v.trade+')':'');vs.appendChild(o);});vs.value=q.vendorIdx;}
+  // Set property
+  var ps=document.getElementById('eq-prop');
+  if(ps){ps.innerHTML='<option value="">All / general</option>';S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);ps.appendChild(o);});ps.value=q.propAddr!==undefined?q.propAddr:'';}
+  openModal('edit-quote');
+}
+function saveEditQuote(){
+  var i=parseInt(document.getElementById('eq-i').value);
+  if(isNaN(i)||!S.quotes[i])return;
+  S.quotes[i].vendorIdx=parseInt(document.getElementById('eq-vendor').value);
+  S.quotes[i].propAddr=document.getElementById('eq-prop').value;
+  S.quotes[i].desc=document.getElementById('eq-desc').value.trim();
+  S.quotes[i].amount=parseFloat(document.getElementById('eq-amt').value)||0;
+  S.quotes[i].date=document.getElementById('eq-date').value;
+  S.quotes[i].hired=document.getElementById('eq-hired').value;
+  S.quotes[i].notes=document.getElementById('eq-notes').value.trim();
+  save();closeModal('edit-quote');renderVendors();
+}
+function delQuoteFromModal(){
+  var i=parseInt(document.getElementById('eq-i').value);
+  if(!confirm('Delete this quote?'))return;
+  S.quotes.splice(i,1);save();closeModal('edit-quote');renderVendors();
+}
+function toggleHired(i){
+  S.quotes[i].hired=S.quotes[i].hired==='yes'?'no':'yes';
+  save();renderVendors();
+}
+
+function renderVendors(){
+  fillSelects();
+  // ── Quote table ──
+  // Populate year filter
+  var qfYr=document.getElementById('qf-yr');
+  if(qfYr){
+    var qfyrv=qfYr.value;
+    qfYr.innerHTML='<option value="">All years</option>';
+    var qyrs=[...new Set(S.quotes.map(function(q){return q.date?q.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();
+    qyrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;qfYr.appendChild(o);});
+    qfYr.value=qfyrv;
+  }
+  var fprop=document.getElementById('qf-prop')&&document.getElementById('qf-prop').value;
+  var ftrade=document.getElementById('qf-trade')&&document.getElementById('qf-trade').value;
+  var fhired=document.getElementById('qf-hired')&&document.getElementById('qf-hired').value;
+  var fyr=document.getElementById('qf-yr')&&document.getElementById('qf-yr').value;
+
+  var data=S.quotes.map(function(q,i){return Object.assign({},q,{_i:i});});
+  if(fprop){
+    data=data.filter(function(q){
+      if(q.propAddr===''||q.propAddr===undefined)return true;
+      var p=S.properties[parseInt(q.propAddr)];
+      return p&&p.address===fprop;
+    });
+  }
+  if(ftrade){
+    data=data.filter(function(q){
+      var v=S.vendors[q.vendorIdx];
+      return v&&v.trade===ftrade;
+    });
+  }
+  if(fhired)data=data.filter(function(q){return q.hired===fhired;});
+  if(fyr)data=data.filter(function(q){return q.date&&q.date.startsWith(fyr);});
+  data.sort(function(a,b){return b.date.localeCompare(a.date);});
+
+  var total=data.reduce(function(a,q){return a+q.amount;},0);
+  var hiredTotal=data.filter(function(q){return q.hired==='yes';}).reduce(function(a,q){return a+q.amount;},0);
+  var cnt=document.getElementById('q-count');if(cnt)cnt.textContent=data.length;
+  var qt=document.getElementById('q-total');if(qt)qt.textContent=fm(total);
+  var qht=document.getElementById('q-hired-total');if(qht)qht.textContent=fm(hiredTotal);
+
+  var tb=document.getElementById('quote-table');
+  if(!tb)return;
+  if(!data.length){tb.innerHTML='<tr><td colspan="8" class="empty">No quotes yet.</td></tr>';}
+  else{
+    tb.innerHTML=data.map(function(q){
+      var v=S.vendors[q.vendorIdx];
+      var vname=v?v.name:'?';
+      var vtrade=v?v.trade:'';
+      var pname=q.propAddr!==''&&q.propAddr!==undefined?sh((S.properties[parseInt(q.propAddr)]||{}).address||'All'):'All';
+      var hiredBadge=q.hired==='yes'?'<span class="badge green">Hired</span>':'<span class="badge gray">Not hired</span>';
+      return '<tr>'
+        +'<td style="font-family:monospace;font-size:12px;white-space:nowrap">'+fd(q.date)+'</td>'
+        +'<td style="font-weight:500">'+vname+'</td>'
+        +'<td><span class="badge gray">'+vtrade+'</span></td>'
+        +'<td style="color:var(--text2)">'+pname+'</td>'
+        +'<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(q.notes||'')+'">'+q.desc+'</td>'
+        +'<td style="font-family:monospace;text-align:right"><strong>'+fm(q.amount)+'</strong></td>'
+        +'<td><span onclick="toggleHired('+q._i+')" style="cursor:pointer" title="Click to toggle">'+hiredBadge+'</span></td>'
+        +'<td><button class="btn icon-btn" onclick="openEditQuote('+q._i+')">&#9998;</button></td>'
+        +'</tr>';
+    }).join('');
+  }
+
+  // ── Vendor directory ──
+  var dir=document.getElementById('vendor-directory');if(!dir)return;
+  if(!S.vendors.length){dir.innerHTML='<div class="empty">No vendors added yet.</div>';return;}
+  // Group by trade
+  var byTrade={};
+  S.vendors.forEach(function(v,i){
+    if(!byTrade[v.trade])byTrade[v.trade]=[];
+    byTrade[v.trade].push(Object.assign({},v,{_i:i}));
+  });
+  dir.innerHTML=Object.keys(byTrade).sort().map(function(trade){
+    return '<div style="padding:0 20px">'
+      +'<div style="font-size:10px;font-family:monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;padding:10px 0 6px;border-bottom:1px solid var(--border)">'+trade+'</div>'
+      +byTrade[trade].map(function(v){
+        var qcount=S.quotes.filter(function(q){return q.vendorIdx==v._i;}).length;
+        var hcount=S.quotes.filter(function(q){return q.vendorIdx==v._i&&q.hired==='yes';}).length;
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">'
+          +'<div>'
+          +'<div style="font-weight:500">'+v.name+'</div>'
+          +'<div style="font-size:12px;color:var(--text3);margin-top:2px;font-family:monospace">'
+          +(v.contact?v.contact+' &middot; ':'')+( v.phone||'')+(v.email?' &middot; '+v.email:'')
+          +'</div>'
+          +(v.notes?'<div style="font-size:12px;color:var(--text3);margin-top:1px">'+v.notes+'</div>':'')
+          +'</div>'
+          +'<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">'
+          +(qcount?'<span style="font-size:11px;font-family:monospace;color:var(--text3)">'+qcount+' quote'+(qcount>1?'s':'')+' &middot; <span style="color:var(--green)">'+hcount+' hired</span></span>':'')
+          +'<button class="btn sm" onclick="openEditVendor('+v._i+')">Edit</button>'
+          +'</div>'
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }).join('');
 }
 
 // ACCOUNTS
