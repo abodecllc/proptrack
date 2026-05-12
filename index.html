@@ -1020,11 +1020,11 @@ function addReminder(){
   var due2=document.getElementById('r-due').value;
   if(!task||!due2||isNaN(pi))return;
   S.reminders.push({propIdx:pi,task:task,due:due2,category:document.getElementById('r-cat').value,priority:document.getElementById('r-pri').value,recurring:document.getElementById('r-rec').value,done:false});
-  save();renderRem();
+  save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();
   ['r-task','r-due'].forEach(function(id){document.getElementById(id).value='';});
 }
-function togRem(i){S.reminders[i].done=!S.reminders[i].done;save();renderRem();}
-function delRem(i){S.reminders.splice(i,1);save();renderRem();}
+function togRem(i){S.reminders[i].done=!S.reminders[i].done;save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();}
+function delRem(i){S.reminders.splice(i,1);save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();}
 function renderRem(){
   var el=document.getElementById('reminder-list');
   if(!S.reminders.length){el.innerHTML='<div class="empty">No reminders yet.</div>';return;}
