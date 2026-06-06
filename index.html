@@ -739,7 +739,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','ea-prop','eq-prop','eq-vendor'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -1652,11 +1652,12 @@ function openEditAcct(i){
   document.getElementById('ea-notes').value=a.notes||'';
   fillSelects();
   document.getElementById('ea-type').value=a.type||'Checking';
-  // Set property
+  // Populate ea-prop with Personal + all properties
   var propSel=document.getElementById('ea-prop');
   if(propSel){
-    if(a.prop==='personal'){propSel.value='personal';}
-    else{Array.from(propSel.options).forEach(function(o){if(o.value==a.prop)o.selected=true;});}
+    propSel.innerHTML='<option value="personal">Personal</option>';
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);propSel.appendChild(o);});
+    propSel.value=a.prop!==undefined?a.prop:'personal';
   }
   openModal('edit-acct');
 }
