@@ -671,6 +671,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     </div>
     <div class="form-row">
       <div class="field"><label>Amount ($)</label><input type="number" id="ee-amt" style="width:140px"></div>
+      <div class="field"><label>Schedule override</label><select id="ee-sched" style="width:180px"><option value="auto">Auto (based on date)</option><option value="E">Schedule E — rental</option><option value="C">Schedule C — STR</option></select></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn danger" onclick="delExpFromModal()" style="margin-right:auto">Delete</button>
@@ -980,6 +981,7 @@ function openEditExp(i){
   document.getElementById('ee-desc').value=e.desc||'';
   document.getElementById('ee-amt').value=e.amount||'';
   document.getElementById('ee-ded').value=e.deductible||'yes';
+  document.getElementById('ee-sched').value=e.scheduleOverride||'auto';
   fillSelects();
   // Set property dropdown — find by address match
   var pp=S.properties[e.propIdx];
@@ -1001,6 +1003,17 @@ function saveEditExp(){
   S.expenses[i].desc=document.getElementById('ee-desc').value.trim();
   S.expenses[i].amount=parseFloat(document.getElementById('ee-amt').value)||0;
   S.expenses[i].deductible=document.getElementById('ee-ded').value;
+  S.expenses[i].scheduleOverride=document.getElementById('ee-sched').value;
+  // Recalculate effective schedule
+  var so=document.getElementById('ee-sched').value;
+  if(so==='C'){S.expenses[i].schedule='C';}
+  else if(so==='E'){S.expenses[i].schedule='E';}
+  else{
+    // Auto — recalculate from property STR window
+    var ep2=S.properties[S.expenses[i].propIdx];
+    var ed=S.expenses[i].date;
+    S.expenses[i].schedule=(ep2&&ep2.strStart&&ep2.strEnd&&ed>=ep2.strStart&&ed<=ep2.strEnd)?'C':'E';
+  }
   save();closeModal('edit-exp');renderExp();
 }
 function delExpFromModal(){
@@ -1038,7 +1051,7 @@ function renderExp(){
   if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No expenses found.</td></tr>';}
   else tb.innerHTML=data.map(function(e){
     var pn=sh(S.properties[e.propIdx]&&S.properties[e.propIdx].address||'?');
-    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.desc||'')+'">'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span>'+(e.schedule==='C'?' <span class="badge amber">Sch C</span>':'')+'</td><td style="white-space:nowrap"><button class="btn icon-btn" onclick="openEditExp('+e._i+')">&#9998;</button> <button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
+    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.desc||'')+'">'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span>'+(e.schedule==='C'?' <span class="badge amber">Sch C'+(e.scheduleOverride==='C'?' &#9998;':'')+'</span>':'')+'</td><td style="white-space:nowrap"><button class="btn icon-btn" onclick="openEditExp('+e._i+')">&#9998;</button> <button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
   }).join('');
   var ded=S.expenses.filter(function(e){return e.deductible==='yes';}).reduce(function(a,e){return a+e.amount;},0);
   var nded=S.expenses.filter(function(e){return e.deductible==='no';}).reduce(function(a,e){return a+e.amount;},0);
