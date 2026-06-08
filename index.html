@@ -172,7 +172,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="form-row">
             <div class="field"><label>Date</label><input type="date" id="e-date" style="width:138px"></div>
             <div class="field"><label>Property</label><select id="e-prop" style="width:160px"></select></div>
-            <div class="field"><label>Category</label><select id="e-cat" style="width:180px" onchange="toggleMortgageRow(this.value)"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select></div>
+            <div class="field"><label>Category</label><select id="e-cat" style="width:180px" onchange="toggleMortgageRow(this.value)"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select></div>
             <div class="field"><label>Description</label><input id="e-desc" placeholder="Brief note" style="width:150px"></div>
             <div class="field"><label>Amount ($)</label><input type="number" id="e-amt" placeholder="0.00" style="width:100px"></div>
             <div class="field"><label>Deductible</label><select id="e-ded" style="width:105px"><option value="yes">Yes</option><option value="no">No</option></select></div>
@@ -199,7 +199,8 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <select id="ef-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="this.dataset.selectedAddr=this.value;renderExp()"><option value="">All properties</option></select>
             <select id="ef-ded" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All types</option><option value="yes">Deductible</option><option value="no">Non-ded.</option></select>
             <select id="ef-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All years</option></select>
-            <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select>
+            <select id="ef-sched" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All schedules</option><option value="E">Schedule E (rental)</option><option value="C">Schedule C (STR)</option></select>
+            <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select>
           </div>
         </div>
         <table><thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Type</th><th></th></tr></thead><tbody id="exp-table"></tbody></table>
@@ -304,6 +305,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <button class="btn" onclick="exportCSV('rent')">Rent payment log</button>
             <button class="btn" onclick="exportCSV('loans')">Loan summary</button>
             <button class="btn" onclick="exportCSV('tenants')">Tenant roster</button>
+          <button class="btn" onclick="exportCSV('schedC')">Schedule C (STR) expenses</button>
           </div>
         </div></div>
         <div class="panel"><div class="panel-header"><span class="panel-title">Tax year summary</span></div><div class="panel-body" id="tax-summary"></div></div>
@@ -500,7 +502,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     <h3>Add property</h3>
     <div class="form-row"><div class="field" style="flex:1"><label>Street address</label><input id="p-addr" placeholder="123 Main St, City, NJ 07000" style="width:100%"></div></div>
     <div class="form-row">
-      <div class="field"><label>Type</label><select id="p-type" style="width:150px"><option>Rental</option><option>Primary home</option></select></div>
+      <div class="field"><label>Type</label><select id="p-type" style="width:150px" onchange="document.getElementById('p-str-dates').style.display=this.value==='Short-term rental (STR)'?'block':'none'"><option>Rental</option><option>Short-term rental (STR)</option><option>Primary home</option></select></div>
       <div class="field" style="flex-direction:row;align-items:flex-end;gap:0">
         <div style="display:flex;flex-direction:column;gap:4px">
           <label style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">Zestimate / Value ($)</label>
@@ -518,6 +520,13 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Monthly rent ($)</label><input type="number" id="p-rent" placeholder="2200" style="width:130px"></div>
       <div class="field"><label>Year built</label><input type="number" id="p-yr" placeholder="1985" style="width:105px"></div>
       <div class="field"><label>Sq ft</label><input type="number" id="p-sqft" placeholder="1400" style="width:95px"></div>
+    </div>
+    <div id="p-str-dates" style="display:none;background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;border:1px solid var(--amber-bg)">
+      <div style="font-size:11px;color:var(--amber);font-family:monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">&#9888; STR period — expenses within this window will be tagged Schedule C</div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="field"><label>STR start date</label><input type="date" id="p-str-start" style="width:150px"></div>
+        <div class="field"><label>STR end date</label><input type="date" id="p-str-end" style="width:150px"></div>
+      </div>
     </div>
     <div class="form-row"><div class="field" style="flex:1"><label>Notes</label><textarea id="p-notes" style="width:100%;height:60px;resize:vertical"></textarea></div></div>
     <div class="form-row"><div class="field" style="flex:1"><label>Google Drive folder link</label><input id="p-drive" placeholder="Paste Google Drive folder URL for this property" style="width:100%"></div></div>
@@ -654,7 +663,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Property</label><select id="ee-prop" style="width:180px"></select></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Category</label><select id="ee-cat" style="width:200px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option></select></div>
+      <div class="field"><label>Category</label><select id="ee-cat" style="width:200px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select></div>
       <div class="field"><label>Deductible</label><select id="ee-ded" style="width:110px"><option value="yes">Yes</option><option value="no">No</option></select></div>
     </div>
     <div class="form-row">
@@ -678,7 +687,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     <input type="hidden" id="ep-i">
     <div class="form-row"><div class="field" style="flex:1"><label>Street address</label><input id="ep-addr" style="width:100%"></div></div>
     <div class="form-row">
-      <div class="field"><label>Type</label><select id="ep-type" style="width:150px"><option>Rental</option><option>Primary home</option></select></div>
+      <div class="field"><label>Type</label><select id="ep-type" style="width:150px" onchange="document.getElementById('ep-str-dates').style.display=this.value==='Short-term rental (STR)'?'block':'none'"><option>Rental</option><option>Short-term rental (STR)</option><option>Primary home</option></select></div>
       <div class="field" style="flex-direction:row;align-items:flex-end;gap:0">
         <div style="display:flex;flex-direction:column;gap:4px">
           <label style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">Zestimate / Value ($)</label>
@@ -696,6 +705,13 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Monthly rent ($)</label><input type="number" id="ep-rent" style="width:130px"></div>
       <div class="field"><label>Year built</label><input type="number" id="ep-yr" style="width:105px"></div>
       <div class="field"><label>Sq ft</label><input type="number" id="ep-sqft" style="width:95px"></div>
+    </div>
+    <div id="ep-str-dates" style="display:none;background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;border:1px solid var(--amber-bg)">
+      <div style="font-size:11px;color:var(--amber);font-family:monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">&#9888; STR period — expenses within this window will be tagged Schedule C</div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="field"><label>STR start date</label><input type="date" id="ep-str-start" style="width:150px"></div>
+        <div class="field"><label>STR end date</label><input type="date" id="ep-str-end" style="width:150px"></div>
+      </div>
     </div>
     <div class="form-row"><div class="field" style="flex:1"><label>Notes</label><textarea id="ep-notes" style="width:100%;height:60px;resize:vertical"></textarea></div></div>
     <div class="form-row"><div class="field" style="flex:1"><label>Google Drive folder link</label><div style="display:flex;gap:0"><input id="ep-drive" placeholder="Paste Google Drive folder URL" style="width:100%;border-radius:var(--radius) 0 0 var(--radius);border-right:none"><a id="ep-drive-link" href="#" target="_blank" style="display:flex;align-items:center;padding:0 12px;height:34px;background:var(--bg4);border:1px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;font-size:12px;color:var(--accent);text-decoration:none;white-space:nowrap" onclick="updateDriveLink()">Open &#8599;</a></div></div></div>
@@ -817,9 +833,10 @@ function fillSelects(){
 // PROPERTIES
 function addProp(){
   var addr=document.getElementById('p-addr').value.trim();if(!addr)return;
-  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,llc:document.getElementById('p-llc').value.trim(),value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value,drive:document.getElementById('p-drive').value.trim()});
+  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,llc:document.getElementById('p-llc').value.trim(),value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value,drive:document.getElementById('p-drive').value.trim(),strStart:document.getElementById('p-str-start').value,strEnd:document.getElementById('p-str-end').value});
   save();closeModal('add-prop');fillSelects();
-  ['p-addr','p-val','p-purch','p-llc','p-rent','p-yr','p-sqft','p-notes','p-drive'].forEach(function(id){document.getElementById(id).value='';});
+  ['p-addr','p-val','p-purch','p-llc','p-rent','p-yr','p-sqft','p-notes','p-drive','p-str-start','p-str-end'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('p-str-dates').style.display='none';
   renderProps();
 }
 function openEditProp(i){
@@ -835,13 +852,16 @@ function openEditProp(i){
   document.getElementById('ep-llc').value=p.llc||'';
   document.getElementById('ep-notes').value=p.notes||'';
   document.getElementById('ep-drive').value=p.drive||'';
+  document.getElementById('ep-str-start').value=p.strStart||'';
+  document.getElementById('ep-str-end').value=p.strEnd||'';
+  document.getElementById('ep-str-dates').style.display=p.type==='Short-term rental (STR)'?'block':'none';
   var dl=document.getElementById('ep-drive-link');if(dl){dl.href=p.drive||'#';dl.style.opacity=p.drive?'1':'0.4';}
   var vn=document.getElementById('ep-val-note');if(vn)vn.textContent=p.valueUpdated?'Last updated: '+p.valueUpdated+' — click Z to refresh':p.value?'No update date recorded':'Enter value or click Z to pull from Zillow';
   openModal('edit-prop');
 }
 function saveProp(){
   var i=parseInt(document.getElementById('ep-i').value);
-  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim()};
+  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim(),strStart:document.getElementById('ep-str-start').value,strEnd:document.getElementById('ep-str-end').value};
   save();closeModal('edit-prop');renderProps();fillSelects();
 }
 function delPropModal(){
@@ -866,6 +886,7 @@ function renderProps(){
     return '<div class="prop-card '+cls+'" onclick="openEditProp('+i+')">'
       +'<h4>'+sh(p.address)+'</h4>'
       +'<div class="prop-sub">'+p.type.toUpperCase()+(p.llc?' &middot; '+p.llc:'')+(p.sqft?' &middot; '+Number(p.sqft).toLocaleString()+' SQ FT':'')+(p.year?' &middot; BUILT '+p.year:'')+'</div>'
+      +(p.type==='Short-term rental (STR)'&&p.strStart&&p.strEnd?'<div style="font-size:11px;color:var(--amber);font-family:monospace;margin-top:4px">STR period: '+fd(p.strStart)+' &rarr; '+fd(p.strEnd)+'</div>':'')
       +'<div class="prop-stats">'
       +'<div class="prop-stat"><div class="ps-label">Zestimate<span style="font-size:9px;margin-left:4px;color:var(--text3)">'+valueAge(p)+'</span></div><div class="ps-val">'+fm(p.value)+'</div></div>'
       +'<div class="prop-stat"><div class="ps-label">Equity</div><div class="ps-val" style="color:var(--green)">'+fm(equity)+'</div></div>'
@@ -940,7 +961,11 @@ function addExpense(){
       S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:(desc||'Mortgage payment')+' [enter interest portion to split]',amount:a,deductible:'yes'});
     }
   } else {
-    S.expenses.push({propIdx:pi,date:d,category:cat,desc:desc,amount:a,deductible:document.getElementById('e-ded').value});
+    var sched='E';
+    var ep=S.properties[pi];
+    if(ep&&ep.strStart&&ep.strEnd&&d>=ep.strStart&&d<=ep.strEnd){sched='C';}
+    if(cat&&cat.startsWith('STR —')){sched='C';}
+    S.expenses.push({propIdx:pi,date:d,category:cat,desc:desc,amount:a,deductible:document.getElementById('e-ded').value,schedule:sched});
   }
   save();renderExp();fillSelects();
   ['e-date','e-amt','e-desc','e-interest'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
@@ -1001,6 +1026,8 @@ function renderExp(){
   if(fd2)data=data.filter(function(e){return e.deductible===fd2;});
   if(fy)data=data.filter(function(e){return e.date&&e.date.startsWith(fy);});
   var fc=document.getElementById('ef-cat')&&document.getElementById('ef-cat').value;
+  var fsched=document.getElementById('ef-sched')&&document.getElementById('ef-sched').value;
+  if(fsched)data=data.filter(function(e){return (e.schedule||'E')===fsched;});
   if(fc==='__mortgage__'){
     data=data.filter(function(e){return e.category==='Mortgage interest'||e.category==='Mortgage principal'||e.category==='Mortgage payment';});
   } else if(fc){
@@ -1011,7 +1038,7 @@ function renderExp(){
   if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No expenses found.</td></tr>';}
   else tb.innerHTML=data.map(function(e){
     var pn=sh(S.properties[e.propIdx]&&S.properties[e.propIdx].address||'?');
-    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.desc||'')+'">'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span></td><td style="white-space:nowrap"><button class="btn icon-btn" onclick="openEditExp('+e._i+')">&#9998;</button> <button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
+    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.desc||'')+'">'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span>'+(e.schedule==='C'?' <span class="badge amber">Sch C</span>':'')+'</td><td style="white-space:nowrap"><button class="btn icon-btn" onclick="openEditExp('+e._i+')">&#9998;</button> <button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
   }).join('');
   var ded=S.expenses.filter(function(e){return e.deductible==='yes';}).reduce(function(a,e){return a+e.amount;},0);
   var nded=S.expenses.filter(function(e){return e.deductible==='no';}).reduce(function(a,e){return a+e.amount;},0);
@@ -1282,6 +1309,9 @@ function exportCSV(type){
   }else if(type==='rent'){
     header='Month,Tenant,Property,Expected,Received,Status,Notes\n';
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
+  }else if(type==='schedC'){
+    header='Date,Property,LLC,Category,Description,Amount,Deductible,Schedule\n';
+    rows=S.expenses.filter(function(e){return e.schedule==='C';}).map(function(e){var p=S.properties[e.propIdx];return e.date+',"'+(p?p.address:'')+'","'+(p&&p.llc?p.llc:'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+(e.deductible==='yes'?'Yes':'No')+',C';}).join('\n');
   }else if(type==='loans'){
     header='Property,Lender,Original Balance,Current Balance,Rate %,Monthly Payment,Next Due\n';
     rows=S.loans.map(function(l){var p=S.properties[l.propIdx];return '"'+(p?p.address:'')+'","'+l.lender+'",'+l.original+','+l.balance+','+l.rate+','+l.payment+','+l.due;}).join('\n');
