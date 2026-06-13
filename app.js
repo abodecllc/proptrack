@@ -844,11 +844,6 @@ function buildLineup() {
       warnings.push(`Slot count issue: ${pos} needs ${req}, got ${actualSlots[pos]}. Set the Slot dropdown for your locked hitters to fix this.`);
   });
 
-  // Visible debug info
-  warnings.push(`DEBUG slotsNeeded(before fill): ${JSON.stringify(slotsNeeded)}`);
-  warnings.push(`DEBUG locked: ${locked.map(p => p.name + '[' + p.pos + ' -> ' + p._slot + ']').join(', ') || '(none)'}`);
-  warnings.push(`DEBUG slotsToFill: ${JSON.stringify(slotsToFill)}`);
-  warnings.push(`DEBUG final assignments: ${luLineup.map(p => p.name + '[' + p.pos + ' -> ' + (p._slot||'?') + ']').join(', ')}`);
 
   // Sort display order - use _slot if set to avoid multi-pos sort confusion
   const posOrder = { SP: 0, C: 1, '1B': 2, '2B': 3, '3B': 4, SS: 5, OF: 6 };
@@ -870,16 +865,7 @@ function renderLineupResult(warnings, CAP, MAX_DIFF) {
   const totalCons = luLineup.reduce((a, p) => a + p.consensus, 0);
   const under = CAP - totalSal;
 
-  const posLabel = p => {
-    if (p.pos.includes('SP')) return 'P';
-    if (p.pos.includes('OF')) return 'OF';
-    if (p.pos.includes('SS')) return 'SS';
-    if (p.pos.includes('3B')) return '3B';
-    if (p.pos.includes('2B')) return '2B';
-    if (p.pos.includes('1B')) return '1B';
-    if (p.pos.includes('C'))  return 'C';
-    return p.pos;
-  };
+  const posLabel = p => p._slot || p.pos.split('/')[0].trim();
 
   const rows = luLineup.map(p => {
     const diffFlag = p.diff > MAX_DIFF
@@ -995,9 +981,9 @@ function exportLineupDK() {
   const sorted = [...luLineup];
   const posOrder = { SP:0, C:1, '1B':2, '2B':3, '3B':4, SS:5, OF:6 };
   sorted.sort((a,b) => {
-    const pa = ['SP','C','1B','2B','3B','SS','OF'].find(k => a.pos.includes(k));
-    const pb = ['SP','C','1B','2B','3B','SS','OF'].find(k => b.pos.includes(k));
-    return (posOrder[pa]||9) - (posOrder[pb]||9);
+    const pa = a._slot || a.pos.split('/')[0].trim();
+    const pb = b._slot || b.pos.split('/')[0].trim();
+    return (posOrder[pa]??9) - (posOrder[pb]??9);
   });
 
   const header = 'P,P,C,1B,2B,3B,SS,OF,OF,OF';
