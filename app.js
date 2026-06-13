@@ -844,6 +844,12 @@ function buildLineup() {
       warnings.push(`Slot count issue: ${pos} needs ${req}, got ${actualSlots[pos]}. Set the Slot dropdown for your locked hitters to fix this.`);
   });
 
+  // Visible debug info
+  warnings.push(`DEBUG slotsNeeded(before fill): ${JSON.stringify(slotsNeeded)}`);
+  warnings.push(`DEBUG locked: ${locked.map(p => p.name + '[' + p.pos + ' -> ' + p._slot + ']').join(', ') || '(none)'}`);
+  warnings.push(`DEBUG slotsToFill: ${JSON.stringify(slotsToFill)}`);
+  warnings.push(`DEBUG final assignments: ${luLineup.map(p => p.name + '[' + p.pos + ' -> ' + (p._slot||'?') + ']').join(', ')}`);
+
   // Sort display order - use _slot if set to avoid multi-pos sort confusion
   const posOrder = { SP: 0, C: 1, '1B': 2, '2B': 3, '3B': 4, SS: 5, OF: 6 };
   luLineup.sort((a, b) => {
