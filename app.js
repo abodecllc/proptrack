@@ -673,17 +673,7 @@ function buildLineup() {
   // Separate consensus-only pool (diff <= MAX_DIFF) vs all eligible
   const consensusPool = eligiblePool.filter(p => p.diff <= MAX_DIFF);
 
-  // Position pools — match on primary position only to avoid multi-pos confusion
-  const posPool = (pos, useConsensus = true) => {
-    const pool = useConsensus ? consensusPool : eligiblePool;
-    return pool.filter(p => {
-      if (!p.pos) return false;
-      const primary = p.pos.split('/')[0].trim();
-      return primary === pos;
-    }).sort((a, b) => b.consensus - a.consensus);
-  };
-
-  // For hitter locks, use user-specified slot if provided — overrides player's primary pos
+  // For hitter locks, use user-specified slot if provided (overrides player's primary pos)
   const h1SlotOverride = gv('lu-lock-h1-pos');
   const h2SlotOverride = gv('lu-lock-h2-pos');
 
@@ -692,39 +682,34 @@ function buildLineup() {
   const lockedH1  = findPlayer(gv('lu-lock-h1'));
   const lockedH2  = findPlayer(gv('lu-lock-h2'));
 
-  // Tag each locked player with the slot they're filling
   if (lockedSP1) lockedSP1._slot = 'SP';
   if (lockedSP2) lockedSP2._slot = 'SP';
-  if (lockedH1)  lockedH1._slot  = h1SlotOverride || lockedH1.pos.split('/')[0].trim();
-  if (lockedH2)  lockedH2._slot  = h2SlotOverride || lockedH2.pos.split('/')[0].trim();
 
   const locked = [lockedSP1, lockedSP2, lockedH1, lockedH2].filter(Boolean);
   const lockedNames = new Set(locked.map(p => p.name));
   const lockedSal = locked.reduce((a, p) => a + p.sal, 0);
   const remaining = CAP - lockedSal;
 
-  // Determine what slots still need to be filled using the assigned slot
-  const filledPositions = { SP: 0, C: 0, '1B': 0, '2B': 0, '3B': 0, SS: 0, OF: 0 };
-  locked.forEach(p => {
-    const slot = p._slot || p.pos.split('/')[0].trim();
-    if (slot === 'SP') filledPositions.SP++;
-    else if (slot === 'C') filledPositions.C++;
-    else if (slot === '1B') filledPositions['1B']++;
-    else if (slot === '2B') filledPositions['2B']++;
-    else if (slot === '3B') filledPositions['3B']++;
-    else if (slot === 'SS') filledPositions.SS++;
-    else if (slot === 'OF') filledPositions.OF++;
-  });
+  // Determine slots remaining to fill, assigning locked hitters to the first
+  // REQUIRED slot they're eligible for (using override if given) that still has room.
+  const REQUIRED_ALL = { SP: 2, C: 1, '1B': 1, '2B': 1, '3B': 1, SS: 1, OF: 3 };
+  const slotsNeeded = { ...REQUIRED_ALL };
 
-  const slotsNeeded = {
-    SP: 2 - filledPositions.SP,
-    C:  1 - filledPositions.C,
-    '1B': 1 - filledPositions['1B'],
-    '2B': 1 - filledPositions['2B'],
-    '3B': 1 - filledPositions['3B'],
-    SS: 1 - filledPositions.SS,
-    OF: 3 - filledPositions.OF,
-  };
+  // SP locks first
+  [lockedSP1, lockedSP2].forEach(p => { if (p) slotsNeeded.SP--; });
+
+  // Hitter locks: use override if provided, else first eligible slot with room
+  [[lockedH1, h1SlotOverride], [lockedH2, h2SlotOverride]].forEach(([p, override]) => {
+    if (!p) return;
+    let slot = override;
+    if (!slot) {
+      slot = Object.keys(REQUIRED_ALL).find(s =>
+        s !== 'SP' && eligibleFor(p, s) && slotsNeeded[s] > 0
+      );
+    }
+    p._slot = slot || p.pos.split('/')[0].trim();
+    if (slotsNeeded[p._slot] !== undefined && slotsNeeded[p._slot] > 0) slotsNeeded[p._slot]--;
+  });
 
   // - Salary-aware optimizer -
   // For each needed slot, build a candidate list (consensus pool first, fallback to eligible)
@@ -735,7 +720,7 @@ function buildLineup() {
   // Minimum salary needed per remaining slot (use cheapest available at each pos)
   function minCostPerPos(pos, usedNames) {
     const pool = [...consensusPool, ...eligiblePool].filter(p =>
-      p.pos && p.pos.split('/')[0].trim() === pos && !usedNames.has(p.name)
+      eligibleFor(p, pos) && !usedNames.has(p.name)
     );
     if (!pool.length) return 0;
     return Math.min(...pool.map(p => p.sal));
@@ -743,13 +728,12 @@ function buildLineup() {
 
   // Candidates for each needed slot, consensus first then fallback
   function getCandidates(pos, usedNames, budgetRemaining) {
-    const primaryMatch = p => p.pos && p.pos.split('/')[0].trim() === pos;
     const consensus = consensusPool.filter(p =>
-      primaryMatch(p) && !usedNames.has(p.name) && p.sal <= budgetRemaining
+      eligibleFor(p, pos) && !usedNames.has(p.name) && p.sal <= budgetRemaining
     ).sort((a,b) => b.consensus - a.consensus);
     if (consensus.length) return consensus;
     return eligiblePool.filter(p =>
-      primaryMatch(p) && !usedNames.has(p.name) && p.sal <= budgetRemaining
+      eligibleFor(p, pos) && !usedNames.has(p.name) && p.sal <= budgetRemaining
     ).sort((a,b) => b.consensus - a.consensus);
   }
 
@@ -765,7 +749,7 @@ function buildLineup() {
     return aOpts - bOpts;
   });
 
-  // ── Greedy optimizer with salary headroom check ──────────────────────────
+  // - Greedy optimizer with salary headroom check -
   // Fill slots in order (most constrained first).
   // At each step: pick highest-consensus player where salary leaves enough
   // for all remaining slots at their minimum cost.
@@ -785,14 +769,14 @@ function buildLineup() {
       const restSlots = slotsArr.slice(idx + 1);
       const minRest = restSlots.reduce((sum, rpos) => {
         const opts = startPool.filter(p =>
-          p.pos.split('/')[0].trim() === rpos && !used.has(p.name)
+          eligibleFor(p, rpos) && !used.has(p.name)
         );
         return sum + (opts.length ? Math.min(...opts.map(p=>p.sal)) : 0);
       }, 0);
 
       const budget_for_this = left - minRest;
       const candidates = startPool.filter(p =>
-        p.pos.split('/')[0].trim() === pos &&
+        eligibleFor(p, pos) &&
         !used.has(p.name) &&
         p.sal <= budget_for_this
       ).sort((a,b) => b.consensus - a.consensus);
@@ -860,7 +844,7 @@ function buildLineup() {
       warnings.push(`Slot count issue: ${pos} needs ${req}, got ${actualSlots[pos]}. Set the Slot dropdown for your locked hitters to fix this.`);
   });
 
-  // Sort display order — use _slot if set to avoid multi-pos sort confusion
+  // Sort display order - use _slot if set to avoid multi-pos sort confusion
   const posOrder = { SP: 0, C: 1, '1B': 2, '2B': 3, '3B': 4, SS: 5, OF: 6 };
   luLineup.sort((a, b) => {
     const sa = a._slot || a.pos.split('/')[0].trim();
