@@ -1723,6 +1723,23 @@ function delAcctFromModal(){
   if(!confirm('Remove this account?'))return;
   S.accounts.splice(i,1);save();closeModal('edit-acct');fillSelects();renderAccounts();
 }
+function toggleReveal(el){
+  var revealed=el.dataset.revealed==='1';
+  if(revealed){
+    el.textContent='•••• '+el.dataset.last4;
+    el.dataset.revealed='0';
+  }else{
+    el.textContent=el.dataset.full;
+    el.dataset.revealed='1';
+    // Auto re-mask after 10 seconds for safety
+    setTimeout(function(){
+      if(el.dataset.revealed==='1'){
+        el.textContent='•••• '+el.dataset.last4;
+        el.dataset.revealed='0';
+      }
+    },10000);
+  }
+}
 function delAccount(i){
   if(!confirm('Remove this account? Associated transfers will remain.'))return;
   S.accounts.splice(i,1);save();fillSelects();renderAccounts();
@@ -1749,7 +1766,7 @@ function renderAccounts(){
           +'<div>'
           +'<div style="font-weight:500;font-size:14px">'+(a.nick||a.bank+' '+a.type)+'</div>'
           +'<div style="font-size:12px;color:var(--text2);font-family:monospace;margin-top:3px">'+a.bank+' &middot; '+a.type
-          +(a.last4?' &middot; Acct: <span style="color:var(--accent)">&bull;&bull;&bull;&bull; '+a.last4+'</span>':'')
+          +(a.acct?' &middot; Acct: <span class="acct-reveal" data-full="'+a.acct+'" data-last4="'+(a.last4||'')+'" onclick="toggleReveal(this)" style="color:var(--accent);cursor:pointer;text-decoration:underline dotted" title="Click to reveal full number">&bull;&bull;&bull;&bull; '+a.last4+'</span>':'')
           +(a.route?' &middot; Routing: <span style="color:var(--text3)">'+a.route+'</span>':'')
           +'</div>'
           +(a.notes?'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+a.notes+'</div>':'')
