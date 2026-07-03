@@ -488,7 +488,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <button class="btn" onclick="exportBackup()">Download backup first</button>
           <button class="btn danger" onclick="clearAll()">Clear all data</button>
         </div>
-        <p style="font-size:11px;color:var(--text3);margin-top:10px;font-family:'DM Mono',monospace">PropTrack v1.0 &mdash; data stored in browser localStorage, optionally synced to GitHub Gist</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:10px;font-family:'DM Mono',monospace">PropTrack v1.1 &mdash; data stored via Claude's persistent artifact storage, optionally synced to GitHub Gist for cross-device access</p>
       </div></div>
     </div>
 
@@ -726,8 +726,33 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 
 <script>
 var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],tenants:[],rentPayments:[],reminders:[]};
-try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
-function save(){try{localStorage.setItem('proptrack_v2',JSON.stringify(S));}catch(e){}}
+var STORAGE_KEY='proptrack_data';
+var saveTimer=null;
+function save(){
+  clearTimeout(saveTimer);
+  var label=document.getElementById('sync-label');
+  if(label)label.textContent='Saving...';
+  saveTimer=setTimeout(function(){
+    window.storage.set(STORAGE_KEY, JSON.stringify(S)).then(function(){
+      var dot=document.getElementById('sync-dot');var lbl=document.getElementById('sync-label');
+      if(dot&&!dot.classList.contains('ok'))dot.className='sync-dot ok';
+      if(lbl)lbl.textContent='Saved';
+    }).catch(function(e){
+      console.error('PropTrack save failed:', e);
+      var dot=document.getElementById('sync-dot');var lbl=document.getElementById('sync-label');
+      if(dot)dot.className='sync-dot err';
+      if(lbl)lbl.textContent='Save failed — see console';
+    });
+  }, 250);
+}
+async function loadData(){
+  try{
+    var res=await window.storage.get(STORAGE_KEY);
+    if(res&&res.value){S=Object.assign(S,JSON.parse(res.value));}
+  }catch(e){
+    // No saved data yet — first run for this artifact instance, that's fine.
+  }
+}
 
 var fm=function(n){return '$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});};
 var fd=function(d){return d?new Date(d+'T00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';};
@@ -1345,18 +1370,36 @@ function restoreBackup(event){
   reader.onload=function(e){try{S=Object.assign(S,JSON.parse(e.target.result));save();alert('Backup restored!');location.reload();}catch(err){alert('Invalid backup file.');}};
   reader.readAsText(file);
 }
-function clearAll(){if(!confirm('Delete ALL data? Download a backup first!'))return;localStorage.removeItem('proptrack_v2');location.reload();}
+function clearAll(){
+  if(!confirm('Delete ALL data? Download a backup first!'))return;
+  window.storage.delete(STORAGE_KEY).catch(function(){});
+  window.storage.delete('proptrack_cfg').catch(function(){});
+  location.reload();
+}
 
 // GIST SYNC
-function loadCfg(){return{token:localStorage.getItem('pt_tok')||'',id:localStorage.getItem('pt_gid')||''};}
+var CFG={token:'',id:''};
+function loadCfg(){return CFG;}
+async function fillCfgFromStorage(){
+  try{
+    var res=await window.storage.get('proptrack_cfg');
+    if(res&&res.value){var parsed=JSON.parse(res.value);CFG.token=parsed.token||'';CFG.id=parsed.id||'';}
+  }catch(e){}
+}
 function saveCfg(){
   var tok=document.getElementById('cfg-token').value.trim();
   var gid=document.getElementById('cfg-gist').value.trim();
-  localStorage.setItem('pt_tok',tok);localStorage.setItem('pt_gid',gid);
+  CFG.token=tok;CFG.id=gid;
+  window.storage.set('proptrack_cfg',JSON.stringify(CFG)).catch(function(){});
   var m=document.getElementById('cfg-msg');m.style.color='var(--green)';m.textContent='Settings saved.';
   updateSync();
 }
-function clearCfg(){localStorage.removeItem('pt_tok');localStorage.removeItem('pt_gid');document.getElementById('cfg-token').value='';document.getElementById('cfg-gist').value='';var m=document.getElementById('cfg-msg');if(m)m.textContent='Credentials cleared.';updateSync();}
+function clearCfg(){
+  CFG.token='';CFG.id='';
+  window.storage.delete('proptrack_cfg').catch(function(){});
+  document.getElementById('cfg-token').value='';document.getElementById('cfg-gist').value='';
+  var m=document.getElementById('cfg-msg');if(m)m.textContent='Credentials cleared.';updateSync();
+}
 async function syncNow(){
   var g=loadCfg();
   if(!g.token){var lbl=document.getElementById('sync-label');if(lbl)lbl.textContent='No token — see Settings';return;}
@@ -1368,7 +1411,7 @@ async function syncNow(){
     var res=await fetch(url,{method:method,headers:{'Authorization':'token '+g.token,'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok)throw new Error(res.status);
     var data=await res.json();
-    if(!g.id){localStorage.setItem('pt_gid',data.id);var gi=document.getElementById('cfg-gist');if(gi)gi.value=data.id;}
+    if(!g.id){CFG.id=data.id;window.storage.set('proptrack_cfg',JSON.stringify(CFG)).catch(function(){});var gi=document.getElementById('cfg-gist');if(gi)gi.value=data.id;}
     var now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     var st=document.getElementById('sync-time');if(st)st.textContent='Synced '+now;
     document.getElementById('sync-dot').className='sync-dot ok';
@@ -1874,12 +1917,21 @@ function valueAge(p){
 }
 
 // INIT
-fillSelects();
-renderDash();
-updateSync();
-loadFromGist();
-var td2=new Date().toISOString().slice(0,10);
-document.querySelectorAll('input[type=date]').forEach(function(el){if(!el.value)el.value=td2;});
+async function init(){
+  var pt=document.getElementById('page-title');
+  if(pt)pt.textContent='Loading…';
+  await loadData();
+  await fillCfgFromStorage();
+  fillSelects();
+  renderDash();
+  updateSync();
+  var pt2=document.getElementById('page-title');
+  if(pt2)pt2.textContent='Dashboard';
+  var td2=new Date().toISOString().slice(0,10);
+  document.querySelectorAll('input[type=date]').forEach(function(el){if(!el.value)el.value=td2;});
+  loadFromGist();
+}
+init();
 </script>
 </body>
 </html>
