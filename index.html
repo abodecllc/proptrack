@@ -142,6 +142,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 
     <!-- DASHBOARD -->
     <div id="dashboard" class="section active">
+      <div id="backup-banner"></div>
       <div class="stat-grid" id="dash-stats"></div>
       <div class="two-col">
         <div class="panel"><div class="panel-header"><span class="panel-title">Recent expenses</span></div><table><thead><tr><th>Property</th><th>Description</th><th>Amount</th></tr></thead><tbody id="dash-exp"></tbody></table></div>
@@ -464,21 +465,22 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="panel" style="margin-bottom:16px"><div class="panel-header"><span class="panel-title">GitHub Gist sync — access from any device</span></div><div class="panel-body">
         <div class="gist-box">
           <h4>How to set up cross-device sync</h4>
-          <p>Your data syncs to a private GitHub Gist — no third-party servers, free forever.</p>
+          <p>Your data syncs to a private GitHub Gist — no third-party servers, free forever. Sync is now manual and one-directional by default: <strong>Push</strong> is safe and just uploads your current data. <strong>Pull</strong> is destructive and overwrites your local data — use it only when setting up a new device for the first time.</p>
           <ol>
             <li>Go to <strong>github.com &rarr; Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Tokens (classic)</strong></li>
             <li>Click "Generate new token (classic)" and give it a name like "PropTrack"</li>
             <li>Check only the <strong>gist</strong> scope</li>
             <li>Copy the token (starts with <code style="font-family:'DM Mono',monospace;color:var(--accent)">ghp_</code>) and paste below</li>
-            <li>Save settings, then click Sync — a Gist ID will be created automatically</li>
-            <li>On any other device, enter the same token + Gist ID to load your data</li>
+            <li>Save settings, then click <strong>Push to Gist</strong> — a Gist ID will be created automatically</li>
+            <li>On any other device, enter the same token + Gist ID, then click <strong>Pull from Gist</strong> to load your data there (only do this once, on setup — never on a device that already has current data)</li>
           </ol>
         </div>
         <div class="form-row"><div class="field" style="flex:1"><label>GitHub personal access token</label><input id="cfg-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;font-family:'DM Mono',monospace"></div></div>
         <div class="form-row"><div class="field" style="flex:1"><label>Gist ID (auto-filled after first sync)</label><input id="cfg-gist" placeholder="Leave blank to create new" style="width:100%;font-family:'DM Mono',monospace"></div></div>
-        <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           <button class="btn primary" onclick="saveCfg()">Save settings</button>
-          <button class="btn" onclick="syncNow()">&#8645; Sync now</button>
+          <button class="btn" onclick="syncNow()" title="Uploads your current local data to the Gist. Safe — never overwrites local data.">&#8593; Push to Gist</button>
+          <button class="btn danger" onclick="pullFromGist()" title="Downloads the Gist and OVERWRITES your local data. Destructive.">&#8595; Pull from Gist (overwrites local!)</button>
           <button class="btn danger" onclick="clearCfg()">Clear credentials</button>
         </div>
         <div id="cfg-msg" style="margin-top:10px;font-size:12px;font-family:'DM Mono',monospace;min-height:18px"></div>
@@ -488,7 +490,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <button class="btn" onclick="exportBackup()">Download backup first</button>
           <button class="btn danger" onclick="clearAll()">Clear all data</button>
         </div>
-        <p style="font-size:11px;color:var(--text3);margin-top:10px;font-family:'DM Mono',monospace">PropTrack v1.2 (localStorage build) &mdash; data stored in this browser's localStorage for this site, optionally synced to GitHub Gist for cross-device access</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:10px;font-family:'DM Mono',monospace">PropTrack v1.3 &mdash; data stored in this browser's localStorage for this site. Gist sync is manual/opt-in only (Push is safe, Pull overwrites local data and requires confirmation).</p>
       </div></div>
     </div>
 
@@ -1281,8 +1283,22 @@ function renderRem(){
   }).join('');
 }
 
+function renderBackupBanner(){
+  var el=document.getElementById('backup-banner');
+  if(!el)return;
+  var last=localStorage.getItem('pt_last_backup');
+  var days=last?Math.floor((new Date()-new Date(last))/86400000):null;
+  var show,color,msg;
+  if(last===null){show=true;color='amber';msg='&#9888; You have never downloaded a backup. If your browser data is lost, everything goes with it. Download one now from Export &rarr; Backup &amp; restore.';}
+  else if(days>=7){show=true;color=days>=21?'red':'amber';msg='&#9888; Last backup was '+days+' day'+(days===1?'':'s')+' ago. Consider downloading a fresh one from Export &rarr; Backup &amp; restore.';}
+  else{show=false;}
+  if(!show){el.innerHTML='';return;}
+  el.innerHTML='<div class="panel" style="margin-bottom:16px;border-color:var(--'+color+')"><div style="padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-size:13px;color:var(--'+color+')">'+msg+'</span><button class="btn sm primary" onclick="exportBackup()">Download backup now</button></div></div>';
+}
+
 // DASHBOARD
 function renderDash(){
+  renderBackupBanner();
   var tv=S.properties.reduce(function(a,p){return a+p.value;},0);
   var td=S.loans.reduce(function(a,l){return a+l.balance;},0);
   var mr=S.properties.filter(function(p){return p.type==='Rental';}).reduce(function(a,p){return a+p.rent;},0);
@@ -1351,6 +1367,8 @@ function exportCSV(type){
 function exportBackup(){
   var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='proptrack_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  try{localStorage.setItem('pt_last_backup', new Date().toISOString());}catch(e){}
+  renderBackupBanner();
 }
 function restoreBackup(event){
   var file=event.target.files[0];if(!file)return;
@@ -1393,15 +1411,18 @@ async function syncNow(){
     var m=document.getElementById('cfg-msg');if(m){m.style.color='var(--red)';m.textContent='Failed: '+e.message+' — check your token in Settings.';}
   }
 }
-async function loadFromGist(){
-  var g=loadCfg();if(!g.token||!g.id)return;
+async function pullFromGist(){
+  var g=loadCfg();
+  if(!g.token||!g.id){alert('No Gist token/ID saved in Settings. Nothing to pull from.');return;}
+  if(!confirm('This will OVERWRITE your current local data with whatever is saved in the Gist. This cannot be undone. Are you sure you want to do this? (Consider downloading a backup first.)'))return;
   try{
     var res=await fetch('https://api.github.com/gists/'+g.id,{headers:{'Authorization':'token '+g.token}});
-    if(!res.ok)return;
+    if(!res.ok){alert('Could not reach Gist (status '+res.status+').');return;}
     var data=await res.json();
     var content=data.files&&data.files['proptrack_data.json']&&data.files['proptrack_data.json'].content;
-    if(content){S=Object.assign(S,JSON.parse(content));save();renderDash();updateSync();}
-  }catch(e){}
+    if(content){S=Object.assign(S,JSON.parse(content));save();renderDash();updateSync();alert('Pulled data from Gist and overwrote local data.');}
+    else{alert('Gist found but contained no proptrack_data.json file.');}
+  }catch(e){alert('Pull failed: '+e.message);}
 }
 function updateSync(){
   var g=loadCfg();
@@ -1890,9 +1911,12 @@ function valueAge(p){
 fillSelects();
 renderDash();
 updateSync();
-loadFromGist();
 var td2=new Date().toISOString().slice(0,10);
 document.querySelectorAll('input[type=date]').forEach(function(el){if(!el.value)el.value=td2;});
+// NOTE: automatic Gist pull-on-load has been removed. It was silently overwriting
+// local data with old Gist snapshots on every page load. Pulling from a Gist is
+// now only ever done via the explicit "Pull from Gist" button in Settings, which
+// requires confirmation since it overwrites local data.
 </script>
 </body>
 </html>
