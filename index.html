@@ -135,7 +135,8 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     <div class="page-title" id="page-title">Dashboard</div>
     <div class="topbar-right">
       <span id="sync-time" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3)"></span>
-      <button class="btn sm" onclick="syncNow()">&#8645; Sync</button>
+      <button class="btn sm" onclick="syncNow()">&#8645; Push</button>
+      <button class="btn sm" onclick="pullFromGist()" style="color:var(--blue)" title="Pull data from Gist">&#8659; Pull</button>
       <button class="btn sm primary" onclick="openModal('add-prop')">+ Add property</button>
     </div>
   </div>
@@ -562,7 +563,8 @@ tr:hover td{background:rgba(255,255,255,0.015)}
         <div class="form-row"><div class="field" style="flex:1"><label>Gist ID (auto-filled after first sync)</label><input id="cfg-gist" placeholder="Leave blank to create new" style="width:100%;font-family:'DM Mono',monospace"></div></div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn primary" onclick="saveCfg()">Save settings</button>
-          <button class="btn" onclick="syncNow()">&#8645; Sync now</button>
+          <button class="btn" onclick="syncNow()">&#8645; Push to Gist</button>
+          <button class="btn" onclick="pullFromGist()" style="color:var(--blue);border-color:rgba(91,141,217,0.4)">&#8659; Pull from Gist</button>
           <button class="btn danger" onclick="clearCfg()">Clear credentials</button>
         </div>
         <div id="cfg-msg" style="margin-top:10px;font-size:12px;font-family:'DM Mono',monospace;min-height:18px"></div>
@@ -1517,6 +1519,12 @@ function clearCfg(){localStorage.removeItem('pt_tok');localStorage.removeItem('p
 async function syncNow(){
   var g=loadCfg();
   if(!g.token){var lbl=document.getElementById('sync-label');if(lbl)lbl.textContent='No token — see Settings';return;}
+  // Safety check — warn if local data looks empty but Gist exists
+  var localProps=(S.properties||[]).length;
+  var localExp=(S.expenses||[]).length;
+  if(g.id&&localProps===0&&localExp===0){
+    if(!confirm('WARNING: Your local data appears empty (0 properties, 0 expenses).\n\nSyncing now will overwrite the Gist with empty data.\n\nAre you sure you want to continue?'))return;
+  }
   var lbl=document.getElementById('sync-label');if(lbl)lbl.textContent='Syncing...';
   try{
     var body={files:{'proptrack_data.json':{content:JSON.stringify(S)}}};
@@ -1537,15 +1545,47 @@ async function syncNow(){
     var m=document.getElementById('cfg-msg');if(m){m.style.color='var(--red)';m.textContent='Failed: '+e.message+' — check your token in Settings.';}
   }
 }
-async function loadFromGist(){
-  var g=loadCfg();if(!g.token||!g.id)return;
+async function pullFromGist(){
+  var g=loadCfg();
+  if(!g.token||!g.id){
+    var m=document.getElementById('cfg-msg');
+    if(m){m.style.color='var(--red)';m.textContent='No token or Gist ID configured.';}
+    return;
+  }
+  var m=document.getElementById('cfg-msg');
+  if(m){m.style.color='var(--text2)';m.textContent='Fetching Gist data...';}
   try{
     var res=await fetch('https://api.github.com/gists/'+g.id,{headers:{'Authorization':'token '+g.token}});
-    if(!res.ok)return;
+    if(!res.ok)throw new Error('HTTP '+res.status);
     var data=await res.json();
     var content=data.files&&data.files['proptrack_data.json']&&data.files['proptrack_data.json'].content;
-    if(content){S=Object.assign(S,JSON.parse(content));save();renderDash();updateSync();}
-  }catch(e){}
+    if(!content){
+      if(m){m.style.color='var(--red)';m.textContent='No PropTrack data found in Gist.';}
+      return;
+    }
+    var parsed=JSON.parse(content);
+    var gistProps=(parsed.properties||[]).length;
+    var gistExp=(parsed.expenses||[]).length;
+    var localProps=(S.properties||[]).length;
+    var localExp=(S.expenses||[]).length;
+    // Show confirmation with what is in Gist vs local
+    var msg='PULL FROM GIST\n\n'
+      +'Gist has: '+gistProps+' properties, '+gistExp+' expenses\n'
+      +'Local has: '+localProps+' properties, '+localExp+' expenses\n\n'
+      +'Pulling will REPLACE your local data with the Gist version.\n'
+      +'Any local changes not yet synced will be lost.\n\n'
+      +'Continue?';
+    if(!confirm(msg))return;
+    S=Object.assign({properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],tenants:[],rentPayments:[],reminders:[]},parsed);
+    save();
+    fillSelects();
+    renderDash();
+    updateSync();
+    if(m){m.style.color='var(--green)';m.textContent='Pull successful — '+gistProps+' properties, '+gistExp+' expenses loaded.';}
+    document.getElementById('sync-dot').className='sync-dot ok';
+  }catch(e){
+    if(m){m.style.color='var(--red)';m.textContent='Pull failed: '+e.message;}
+  }
 }
 function updateSync(){
   var g=loadCfg();
@@ -2194,7 +2234,6 @@ function valueAge(p){
 fillSelects();
 renderDash();
 updateSync();
-loadFromGist();
 var td2=new Date().toISOString().slice(0,10);
 document.querySelectorAll('input[type=date]').forEach(function(el){if(!el.value)el.value=td2;});
 </script>
