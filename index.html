@@ -135,6 +135,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     <div class="page-title" id="page-title">Dashboard</div>
     <div class="topbar-right">
       <span id="sync-time" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3)"></span>
+      <span id="unsaved-dot" title="Unsaved local changes — push to sync" style="display:none;width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber);flex-shrink:0;margin-right:2px"></span>
       <button class="btn sm" onclick="syncNow()">&#8645; Push</button>
       <button class="btn sm" onclick="pullFromGist()" style="color:var(--blue)" title="Pull data from Gist">&#8659; Pull</button>
       <button class="btn sm primary" onclick="openModal('add-prop')">+ Add property</button>
@@ -878,7 +879,24 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 <script>
 var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
-function save(){try{localStorage.setItem('proptrack_v2',JSON.stringify(S));}catch(e){}}
+function save(){
+  try{
+    localStorage.setItem('proptrack_v2',JSON.stringify(S));
+    markDirty();
+  }catch(e){}
+}
+function markDirty(){
+  var dot=document.getElementById('unsaved-dot');
+  if(dot)dot.style.display='inline-block';
+  var btn=document.querySelector('button[onclick="syncNow()"]');
+  if(btn){btn.style.borderColor='var(--amber)';btn.style.color='var(--amber)';}
+}
+function markClean(){
+  var dot=document.getElementById('unsaved-dot');
+  if(dot)dot.style.display='none';
+  var btn=document.querySelector('button[onclick="syncNow()"]');
+  if(btn){btn.style.borderColor='';btn.style.color='';}
+}
 
 var fm=function(n){return '$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});};
 var fd=function(d){return d?new Date(d+'T00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';};
@@ -1535,10 +1553,12 @@ async function syncNow(){
     var data=await res.json();
     if(!g.id){localStorage.setItem('pt_gid',data.id);var gi=document.getElementById('cfg-gist');if(gi)gi.value=data.id;}
     var now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    var st=document.getElementById('sync-time');if(st)st.textContent='Synced '+now;
+    var st=document.getElementById('sync-time');if(st)st.textContent='Pushed '+now;
     document.getElementById('sync-dot').className='sync-dot ok';
     if(lbl)lbl.textContent='Synced';
-    var m=document.getElementById('cfg-msg');if(m){m.style.color='var(--green)';m.textContent='Sync successful!';}
+    localStorage.setItem('pt_last_push', JSON.stringify(S));
+    markClean();
+    var m=document.getElementById('cfg-msg');if(m){m.style.color='var(--green)';m.textContent='Push successful!';}
   }catch(e){
     document.getElementById('sync-dot').className='sync-dot err';
     if(lbl)lbl.textContent='Sync failed';
@@ -2234,6 +2254,22 @@ function valueAge(p){
 fillSelects();
 renderDash();
 updateSync();
+// Check if local data differs from last push
+(function(){
+  try{
+    var lastPush=localStorage.getItem('pt_last_push');
+    if(!lastPush){
+      // Never pushed — mark dirty if there's any data
+      if((S.properties||[]).length>0||(S.expenses||[]).length>0)markDirty();
+    } else {
+      var pushed=JSON.parse(lastPush);
+      // Compare expense and property counts as a quick check
+      var localCount=(S.expenses||[]).length+(S.properties||[]).length;
+      var pushCount=(pushed.expenses||[]).length+(pushed.properties||[]).length;
+      if(localCount!==pushCount)markDirty();
+    }
+  }catch(e){}
+})();
 var td2=new Date().toISOString().slice(0,10);
 document.querySelectorAll('input[type=date]').forEach(function(el){if(!el.value)el.value=td2;});
 </script>
