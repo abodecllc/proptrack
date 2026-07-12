@@ -118,6 +118,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   <div class="nav-item" onclick="nav('cashflow',this)"><span class="nav-icon">&#8652;</span><span>Cashflow</span></div>
   <div class="nav-item" onclick="nav('loans',this)"><span class="nav-icon">&#8856;</span><span>Loans</span></div>
   <div class="nav-item" onclick="nav('accounts',this)"><span class="nav-icon">&#9774;</span><span>Accounts</span></div>
+  <div class="nav-item" onclick="nav('creditcards',this)"><span class="nav-icon">&#9635;</span><span>Credit Cards</span></div>
   <div class="nav-item" onclick="nav('transfers',this)"><span class="nav-icon">&#8644;</span><span>Transfers</span></div>
   <div class="nav-section">Operations</div>
   <div class="nav-item" onclick="nav('insurance',this)"><span class="nav-icon">&#9737;</span><span>Insurance</span></div>
@@ -179,6 +180,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <div class="field"><label>Description</label><input id="e-desc" placeholder="Brief note" style="width:150px"></div>
             <div class="field"><label>Amount ($)</label><input type="number" id="e-amt" placeholder="0.00" style="width:100px"></div>
             <div class="field"><label>Deductible</label><select id="e-ded" style="width:105px"><option value="yes">Yes</option><option value="no">No</option></select></div>
+            <div class="field"><label>Paid with</label><select id="e-acct" style="width:180px"><option value="">-- select account --</option></select></div>
             <button class="btn primary" onclick="addExpense()">Add</button>
           </div>
           <div class="form-row" id="mortgage-split-row" style="display:none;background:var(--bg3);padding:10px 12px;border-radius:var(--radius);margin-top:-4px;align-items:center;flex-wrap:wrap;gap:12px">
@@ -206,7 +208,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select>
           </div>
         </div>
-        <table><thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Type</th><th></th></tr></thead><tbody id="exp-table"></tbody></table>
+        <table><thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Paid with</th><th>Type</th><th></th></tr></thead><tbody id="exp-table"></tbody></table>
         <div style="display:flex;gap:20px;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3)">
           <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3)">Deductible: <strong style="color:var(--green)" id="tot-ded">$0</strong></span>
           <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3)">Non-ded.: <strong style="color:var(--amber)" id="tot-nd">$0</strong></span>
@@ -495,6 +497,48 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 
     </div>
 
+    <!-- CREDIT CARDS -->
+    <div id="creditcards" class="section">
+
+      <!-- Add card panel -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header"><span class="panel-title">Add credit card</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="field"><label>Bank / Issuer</label><input id="cc-bank" placeholder="Chase, Amex, Citi..." style="width:150px"></div>
+            <div class="field"><label>Card nickname</label><input id="cc-nick" placeholder="Chase Sapphire, Amex Biz..." style="width:190px"></div>
+            <div class="field"><label>Last 4 digits</label><input id="cc-last4" placeholder="1234" maxlength="4" style="width:100px"></div>
+            <div class="field"><label>Associated LLC / Owner</label><select id="cc-owner" style="width:180px"></select></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Statement closing day</label><input type="number" id="cc-close" placeholder="15" min="1" max="31" style="width:140px"></div>
+            <div class="field"><label>Payment due day</label><input type="number" id="cc-due" placeholder="10" min="1" max="31" style="width:130px"></div>
+            <div class="field"><label>Credit limit ($)</label><input type="number" id="cc-limit" placeholder="10000" style="width:130px"></div>
+            <div class="field"><label>Notes</label><input id="cc-notes" placeholder="Rewards, authorized users, etc." style="width:200px"></div>
+            <button class="btn primary" onclick="addCard()">Add card</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card list -->
+      <div id="card-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:20px"></div>
+
+      <!-- Payment log -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Payment history</span>
+          <div style="display:flex;gap:8px">
+            <select id="ccf-card" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderCards()"><option value="">All cards</option></select>
+            <select id="ccf-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderCards()"><option value="">All years</option></select>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Date paid</th><th>Card</th><th>Amount paid</th><th>Paid from account</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="cc-payment-table"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ACCOUNTS -->
     <div id="accounts" class="section">
       <div class="panel" style="margin-bottom:16px"><div class="panel-header"><span class="panel-title">Add account</span></div><div class="panel-body">
@@ -749,6 +793,56 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT CARD MODAL -->
+<div class="modal-bg" id="modal-edit-card">
+  <div class="modal">
+    <h3>Edit credit card</h3>
+    <input type="hidden" id="ec-i">
+    <div class="form-row">
+      <div class="field"><label>Bank / Issuer</label><input id="ec-bank" style="width:150px"></div>
+      <div class="field"><label>Card nickname</label><input id="ec-nick" style="width:190px"></div>
+      <div class="field"><label>Last 4 digits</label><input id="ec-last4" maxlength="4" style="width:100px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Associated LLC / Owner</label><select id="ec-owner" style="width:180px"></select></div>
+      <div class="field"><label>Statement closing day</label><input type="number" id="ec-close" min="1" max="31" style="width:140px"></div>
+      <div class="field"><label>Payment due day</label><input type="number" id="ec-due" min="1" max="31" style="width:130px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Credit limit ($)</label><input type="number" id="ec-limit" style="width:130px"></div>
+      <div class="field" style="flex:1"><label>Notes</label><input id="ec-notes" style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delCardFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-card')">Cancel</button>
+      <button class="btn primary" onclick="saveEditCard()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG PAYMENT MODAL -->
+<div class="modal-bg" id="modal-log-payment">
+  <div class="modal">
+    <h3>Log payment</h3>
+    <input type="hidden" id="lp-card-i">
+    <div id="lp-card-name" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+    <div class="form-row">
+      <div class="field"><label>Date paid</label><input type="date" id="lp-date" style="width:145px"></div>
+      <div class="field"><label>Amount paid ($)</label><input type="number" id="lp-amt" placeholder="0.00" style="width:140px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Paid from account</label><select id="lp-acct" style="width:220px"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Notes</label><input id="lp-notes" placeholder="Full payment, minimum, etc." style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn" onclick="closeModal('log-payment')">Cancel</button>
+      <button class="btn primary" onclick="saveCardPayment()">Log payment</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT ACCOUNT MODAL -->
 <div class="modal-bg" id="modal-edit-acct">
   <div class="modal">
@@ -877,7 +971,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 </div>
 
 <script>
-var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],tenants:[],rentPayments:[],reminders:[]};
+var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
 function save(){
   try{
@@ -906,7 +1000,7 @@ var ini=function(n){return n?n.split(' ').map(function(w){return w[0];}).slice(0
 var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d;};
 var du=function(d){return d?Math.round((new Date(d+'T00:00')-tod())/86400000):999;};
 var CY=new Date().getFullYear();
-var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',accounts:'Accounts',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
+var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',accounts:'Accounts',creditcards:'Credit Cards',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
 
 function nav(id,el){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
@@ -916,7 +1010,7 @@ function nav(id,el){
   if(el){el.classList.add('active');}
   else{document.querySelectorAll('.nav-item').forEach(function(n){if(n.onclick&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+id+"'")>-1)n.classList.add('active');});}
   fillSelects();
-  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,accounts:renderAccounts,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
+  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,accounts:renderAccounts,creditcards:renderCards,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
   if(renders[id])renders[id]();
 }
 
@@ -941,6 +1035,58 @@ function fillSelects(){
   }
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
+  // Expense 'Paid with' dropdown — grouped by type
+  var eAcct=document.getElementById('e-acct');
+  if(eAcct){
+    var prev=eAcct.value;
+    eAcct.innerHTML='<option value="">-- select account --</option>';
+    if(S.accounts.length){
+      var grpBank=document.createElement('optgroup');grpBank.label='Bank Accounts';
+      S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value='acct_'+i;o.textContent=a.nick||a.bank+' ···'+a.last4;grpBank.appendChild(o);});
+      eAcct.appendChild(grpBank);
+    }
+    if(S.cards.length){
+      var grpCard=document.createElement('optgroup');grpCard.label='Credit Cards';
+      S.cards.forEach(function(c,i){var o=document.createElement('option');o.value='card_'+i;o.textContent=c.nick||c.bank+' ···'+c.last4;grpCard.appendChild(o);});
+      eAcct.appendChild(grpCard);
+    }
+    if(prev)eAcct.value=prev;
+  }
+  // Credit card owner dropdown (LLC or Personal)
+  ['cc-owner','ec-owner'].forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    var prev=el.value;
+    el.innerHTML='<option value="personal">Personal</option>';
+    // Add unique LLCs from properties
+    var llcs=[...new Set(S.properties.map(function(p){return p.llc;}).filter(Boolean))];
+    llcs.forEach(function(llc){var o=document.createElement('option');o.value=llc;o.textContent=llc;el.appendChild(o);});
+    if(prev)el.value=prev;
+  });
+  // ccf-card filter
+  var ccfCard=document.getElementById('ccf-card');
+  if(ccfCard){
+    var prev=ccfCard.value;
+    ccfCard.innerHTML='<option value="">All cards</option>';
+    S.cards.forEach(function(c,i){var o=document.createElement('option');o.value=i;o.textContent=c.nick||c.bank+' '+c.last4;ccfCard.appendChild(o);});
+    ccfCard.value=prev;
+  }
+  // ccf-yr filter
+  var ccfYr=document.getElementById('ccf-yr');
+  if(ccfYr){
+    var prev2=ccfYr.value;
+    ccfYr.innerHTML='<option value="">All years</option>';
+    var yrs=[...new Set(S.cardPayments.map(function(p){return p.date?p.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();
+    yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;ccfYr.appendChild(o);});
+    ccfYr.value=prev2;
+  }
+  // lp-acct — bank accounts for paying card
+  var lpAcct=document.getElementById('lp-acct');
+  if(lpAcct){
+    var prev3=lpAcct.value;
+    lpAcct.innerHTML='<option value="">-- select account --</option>';
+    S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value=i;o.textContent=a.nick||a.bank+' '+a.type;lpAcct.appendChild(o);});
+    lpAcct.value=prev3;
+  }
   // Accounts + Transfers selects — wrapped in try/catch since these elements
   // only exist on their respective pages and may not be in the DOM yet
   // Insurance property filter
@@ -1143,7 +1289,7 @@ function addExpense(){
     var ep=S.properties[pi];
     if(ep&&ep.strStart&&ep.strEnd&&d>=ep.strStart&&d<=ep.strEnd){sched='C';}
     if(cat&&cat.startsWith('STR —')){sched='C';}
-    S.expenses.push({propIdx:pi,date:d,category:cat,desc:desc,amount:a,deductible:document.getElementById('e-ded').value,schedule:sched});
+    S.expenses.push({propIdx:pi,date:d,category:cat,desc:desc,amount:a,deductible:document.getElementById('e-ded').value,paidWith:(document.getElementById('e-acct')&&document.getElementById('e-acct').value)||'',schedule:sched});
   }
   save();renderExp();fillSelects();
   ['e-date','e-amt','e-desc','e-interest'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
@@ -1228,7 +1374,7 @@ function renderExp(){
   if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No expenses found.</td></tr>';}
   else tb.innerHTML=data.map(function(e){
     var pn=sh(S.properties[e.propIdx]&&S.properties[e.propIdx].address||'?');
-    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.desc||'')+'">'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span>'+(e.schedule==='C'?' <span class="badge amber">Sch C'+(e.scheduleOverride==='C'?' &#9998;':'')+'</span>':'')+'</td><td style="white-space:nowrap"><button class="btn icon-btn" onclick="openEditExp('+e._i+')">&#9998;</button> <button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
+    return '<tr><td style="font-family:\'DM Mono\',monospace;font-size:12px">'+fd(e.date)+'</td><td>'+pn+'</td><td style="color:var(--text2)">'+e.category+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.desc||'')+'">'+(e.desc||'—')+'</td><td style="font-family:\'DM Mono\',monospace"><strong>'+fm(e.amount)+'</strong></td><td style="font-size:12px;color:var(--text3)">'+paidWithLabel(e.paidWith||'')+'</td><td><span class="badge '+(e.deductible==='yes'?'green':'amber')+'">'+(e.deductible==='yes'?'Deductible':'Non-ded.')+'</span>'+(e.schedule==='C'?' <span class="badge amber">Sch C'+(e.scheduleOverride==='C'?' &#9998;':'')+'</span>':'')+'</td><td style="white-space:nowrap"><button class="btn icon-btn" onclick="openEditExp('+e._i+')">&#9998;</button> <button class="btn icon-btn danger" onclick="delExp('+e._i+')">x</button></td></tr>';
   }).join('');
   var ded=S.expenses.filter(function(e){return e.deductible==='yes';}).reduce(function(a,e){return a+e.amount;},0);
   var nded=S.expenses.filter(function(e){return e.deductible==='no';}).reduce(function(a,e){return a+e.amount;},0);
@@ -1615,6 +1761,169 @@ function updateSync(){
   else{if(dot)dot.className='sync-dot';if(lbl)lbl.textContent='Local only';}
   var ct=document.getElementById('cfg-token');if(ct)ct.value=g.token;
   var cg=document.getElementById('cfg-gist');if(cg)cg.value=g.id;
+}
+
+// CREDIT CARDS
+function paidWithLabel(val){
+  if(!val)return '—';
+  if(val.startsWith('acct_')){var a=S.accounts[parseInt(val.replace('acct_',''))];return a?a.nick||a.bank+' ···'+a.last4:'?';}
+  if(val.startsWith('card_')){var c=S.cards[parseInt(val.replace('card_',''))];return c?c.nick||c.bank+' ···'+c.last4:'?';}
+  return val;
+}
+function cardLabel(c){return c?(c.nick||c.bank)+(c.last4?' ···'+c.last4:''):'?';}
+function nextDueDate(dueDay){
+  var now=new Date();
+  var d=new Date(now.getFullYear(),now.getMonth(),parseInt(dueDay));
+  if(d<=now)d=new Date(now.getFullYear(),now.getMonth()+1,parseInt(dueDay));
+  return d;
+}
+function addCard(){
+  var bank=document.getElementById('cc-bank').value.trim();
+  var nick=document.getElementById('cc-nick').value.trim();
+  if(!bank&&!nick)return;
+  var card={
+    bank:bank,nick:nick,
+    last4:document.getElementById('cc-last4').value.trim(),
+    owner:document.getElementById('cc-owner').value,
+    closeDay:document.getElementById('cc-close').value,
+    dueDay:document.getElementById('cc-due').value,
+    limit:parseFloat(document.getElementById('cc-limit').value)||0,
+    notes:document.getElementById('cc-notes').value.trim()
+  };
+  S.cards.push(card);
+  // Auto-create 7-day and 3-day reminders if dueDay is set
+  if(card.dueDay){autoCreateCardReminders(S.cards.length-1,card);}
+  save();fillSelects();renderCards();
+  ['cc-bank','cc-nick','cc-last4','cc-close','cc-due','cc-limit','cc-notes'].forEach(function(id){document.getElementById(id).value='';});
+}
+function autoCreateCardReminders(cardIdx,card){
+  if(!card.dueDay)return;
+  var due=nextDueDate(card.dueDay);
+  var fmt2=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  var label=cardLabel(card)+' payment due';
+  // 7 days before
+  var d7=new Date(due);d7.setDate(d7.getDate()-7);
+  S.reminders.push({propIdx:0,task:label,due:fmt2(d7),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx});
+  // 3 days before
+  var d3=new Date(due);d3.setDate(d3.getDate()-3);
+  S.reminders.push({propIdx:0,task:label+' — 3 days',due:fmt2(d3),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx});
+}
+function openEditCard(i){
+  var c=S.cards[i];if(!c)return;
+  document.getElementById('ec-i').value=i;
+  document.getElementById('ec-bank').value=c.bank||'';
+  document.getElementById('ec-nick').value=c.nick||'';
+  document.getElementById('ec-last4').value=c.last4||'';
+  document.getElementById('ec-close').value=c.closeDay||'';
+  document.getElementById('ec-due').value=c.dueDay||'';
+  document.getElementById('ec-limit').value=c.limit||'';
+  document.getElementById('ec-notes').value=c.notes||'';
+  fillSelects();
+  document.getElementById('ec-owner').value=c.owner||'personal';
+  openModal('edit-card');
+}
+function saveEditCard(){
+  var i=parseInt(document.getElementById('ec-i').value);
+  if(isNaN(i)||!S.cards[i])return;
+  S.cards[i].bank=document.getElementById('ec-bank').value.trim();
+  S.cards[i].nick=document.getElementById('ec-nick').value.trim();
+  S.cards[i].last4=document.getElementById('ec-last4').value.trim();
+  S.cards[i].owner=document.getElementById('ec-owner').value;
+  S.cards[i].closeDay=document.getElementById('ec-close').value;
+  S.cards[i].dueDay=document.getElementById('ec-due').value;
+  S.cards[i].limit=parseFloat(document.getElementById('ec-limit').value)||0;
+  S.cards[i].notes=document.getElementById('ec-notes').value.trim();
+  save();closeModal('edit-card');fillSelects();renderCards();
+}
+function delCardFromModal(){
+  var i=parseInt(document.getElementById('ec-i').value);
+  if(!confirm('Remove this card?'))return;
+  S.cards.splice(i,1);save();closeModal('edit-card');fillSelects();renderCards();
+}
+function openLogPayment(i){
+  var c=S.cards[i];if(!c)return;
+  document.getElementById('lp-card-i').value=i;
+  document.getElementById('lp-card-name').textContent=cardLabel(c)+' — '+(c.owner==='personal'?'Personal':c.owner);
+  document.getElementById('lp-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('lp-amt').value='';
+  document.getElementById('lp-notes').value='';
+  fillSelects();
+  openModal('log-payment');
+}
+function saveCardPayment(){
+  var i=parseInt(document.getElementById('lp-card-i').value);
+  var amt=parseFloat(document.getElementById('lp-amt').value)||0;
+  var date=document.getElementById('lp-date').value;
+  if(!date||!amt)return;
+  S.cardPayments.push({
+    cardIdx:i,date:date,amount:amt,
+    fromAcct:document.getElementById('lp-acct').value,
+    notes:document.getElementById('lp-notes').value.trim()
+  });
+  save();closeModal('log-payment');renderCards();
+}
+function delCardPayment(i){S.cardPayments.splice(i,1);save();renderCards();}
+
+function renderCards(){
+  fillSelects();
+  // ── Card tiles ──
+  var cl=document.getElementById('card-list');if(!cl)return;
+  if(!S.cards.length){cl.innerHTML='<div class="empty" style="grid-column:1/-1">No credit cards added yet.</div>';}
+  else{
+    cl.innerHTML=S.cards.map(function(c,i){
+      var due=c.dueDay?nextDueDate(parseInt(c.dueDay)):null;
+      var daysUntil2=due?Math.round((due-new Date())/86400000):null;
+      var dueColor=daysUntil2===null?'var(--text3)':daysUntil2<=3?'var(--red)':daysUntil2<=7?'var(--amber)':'var(--green)';
+      var dueLabel=daysUntil2===null?'—':daysUntil2===0?'Due today':daysUntil2===1?'Due tomorrow':'Due in '+daysUntil2+'d';
+      var lastPay=S.cardPayments.filter(function(p){return p.cardIdx===i;}).sort(function(a,b){return b.date.localeCompare(a.date);})[0];
+      return '<div class="panel" style="padding:0">'
+        +'<div style="padding:16px 18px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        +'<div>'
+        +'<div style="font-weight:500;font-size:15px">'+(c.nick||c.bank)+'</div>'
+        +'<div style="font-size:12px;color:var(--text2);font-family:monospace;margin-top:2px">'
+        +c.bank+(c.last4?' &middot; &#183;&#183;&#183;&#183; '+c.last4:'')
+        +' &middot; '+(c.owner==='personal'?'Personal':c.owner)
+        +'</div>'
+        +(c.notes?'<div style="font-size:12px;color:var(--text3);margin-top:3px">'+c.notes+'</div>':'')
+        +'</div>'
+        +'<div style="text-align:right">'
+        +(c.limit?'<div style="font-size:11px;color:var(--text3);font-family:monospace">Limit: '+fm(c.limit)+'</div>':'')
+        +'</div></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">'
+        +'<div>'
+        +(c.closeDay?'<div style="font-size:11px;color:var(--text3);font-family:monospace">Closes: day '+c.closeDay+' &nbsp;&middot;&nbsp; </div>':'')
+        +'<div style="font-size:13px;font-weight:500;color:'+dueColor+'">'+dueLabel+'</div>'
+        +(lastPay?'<div style="font-size:11px;color:var(--text3);margin-top:2px">Last paid: '+fm(lastPay.amount)+' on '+fd(lastPay.date)+'</div>':'<div style="font-size:11px;color:var(--text3);margin-top:2px">No payments logged</div>')
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;gap:6px">'
+        +'<button class="btn sm primary" onclick="openLogPayment('+i+')">Log payment</button>'
+        +'<button class="btn sm" onclick="openEditCard('+i+')">Edit</button>'
+        +'</div></div></div></div>';
+    }).join('');
+  }
+
+  // ── Payment history table ──
+  var fc=document.getElementById('ccf-card')&&document.getElementById('ccf-card').value;
+  var fy=document.getElementById('ccf-yr')&&document.getElementById('ccf-yr').value;
+  var data=S.cardPayments.map(function(p,i){return Object.assign({},p,{_i:i});});
+  if(fc!=='')data=data.filter(function(p){return p.cardIdx==fc;});
+  if(fy)data=data.filter(function(p){return p.date&&p.date.startsWith(fy);});
+  data.sort(function(a,b){return b.date.localeCompare(a.date);});
+  var tb=document.getElementById('cc-payment-table');if(!tb)return;
+  if(!data.length){tb.innerHTML='<tr><td colspan="6" class="empty">No payments logged yet.</td></tr>';return;}
+  tb.innerHTML=data.map(function(p){
+    var c=S.cards[p.cardIdx];
+    var acct=p.fromAcct?paidWithLabel('acct_'+p.fromAcct):'—';
+    return '<tr>'
+      +'<td style="font-family:monospace;font-size:12px;white-space:nowrap">'+fd(p.date)+'</td>'
+      +'<td style="font-weight:500">'+(c?cardLabel(c):'?')+'</td>'
+      +'<td style="font-family:monospace"><strong>'+fm(p.amount)+'</strong></td>'
+      +'<td style="color:var(--text2)">'+acct+'</td>'
+      +'<td style="color:var(--text3)">'+(p.notes||'—')+'</td>'
+      +'<td><button class="btn icon-btn danger" onclick="delCardPayment('+p._i+')">x</button></td>'
+      +'</tr>';
+  }).join('');
 }
 
 // INSURANCE
