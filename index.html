@@ -642,7 +642,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <div class="field"><label>Property</label><select id="rec-prop" style="width:170px"></select></div>
             <div class="field"><label>Category</label>
               <select id="rec-cat" style="width:180px">
-                <option>Mortgage interest</option><option>HOA fees</option><option>Property tax</option>
+                <option>Mortgage payment</option><option>Mortgage interest</option><option>HOA fees</option><option>Property tax</option>
                 <option>Insurance</option><option>Utilities</option><option>Property management</option>
                 <option>Repairs &amp; maintenance</option><option>Professional fees</option><option>Other deductible</option><option>Non-deductible</option>
               </select>
@@ -990,7 +990,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Property</label><select id="er-prop" style="width:170px"></select></div>
       <div class="field"><label>Category</label>
         <select id="er-cat" style="width:180px">
-          <option>Mortgage interest</option><option>HOA fees</option><option>Property tax</option>
+          <option>Mortgage payment</option><option>Mortgage interest</option><option>HOA fees</option><option>Property tax</option>
           <option>Insurance</option><option>Utilities</option><option>Property management</option>
           <option>Repairs &amp; maintenance</option><option>Professional fees</option><option>Other deductible</option><option>Non-deductible</option>
         </select>
@@ -2326,7 +2326,20 @@ function confirmDueExpenses(){
     var p=S.properties[parseInt(r.propAddr)];
     var sched='E';
     if(p&&p.strStart&&p.strEnd&&todayStr>=p.strStart&&todayStr<=p.strEnd)sched='C';
-    S.expenses.push({propIdx:parseInt(r.propAddr),date:todayStr,category:r.category,desc:r.desc||r.category,amount:amt,deductible:r.deductible,paidWith:r.acct||'',schedule:sched,fromRecurring:true});
+    if(r.category==='Mortgage payment'){
+      // Auto-split into interest + principal using loan interestPct
+      var loan2=S.loans.find(function(l){return l.propIdx==parseInt(r.propAddr);});
+      var interest2=loan2&&loan2.interestPct?Math.round(amt*(loan2.interestPct/100)*100)/100:0;
+      if(interest2>0&&interest2<amt){
+        var principal2=Math.round((amt-interest2)*100)/100;
+        S.expenses.push({propIdx:parseInt(r.propAddr),date:todayStr,category:'Mortgage interest',desc:(r.desc||'Mortgage')+' - interest portion',amount:interest2,deductible:'yes',paidWith:r.acct||'',schedule:sched,fromRecurring:true});
+        S.expenses.push({propIdx:parseInt(r.propAddr),date:todayStr,category:'Mortgage principal',desc:(r.desc||'Mortgage')+' - principal portion',amount:principal2,deductible:'no',paidWith:r.acct||'',schedule:sched,fromRecurring:true});
+      } else {
+        S.expenses.push({propIdx:parseInt(r.propAddr),date:todayStr,category:'Mortgage interest',desc:(r.desc||'Mortgage payment')+' [set interest % on loan to auto-split]',amount:amt,deductible:'yes',paidWith:r.acct||'',schedule:sched,fromRecurring:true});
+      }
+    } else {
+      S.expenses.push({propIdx:parseInt(r.propAddr),date:todayStr,category:r.category,desc:r.desc||r.category,amount:amt,deductible:r.deductible,paidWith:r.acct||'',schedule:sched,fromRecurring:true});
+    }
     S.recurring[i].lastLogged=curYM;
   });
   save();
