@@ -117,6 +117,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   <div class="nav-item" onclick="nav('expenses',this)"><span class="nav-icon">$</span><span>Expenses</span></div>
   <div class="nav-item" onclick="nav('cashflow',this)"><span class="nav-icon">&#8652;</span><span>Cashflow</span></div>
   <div class="nav-item" onclick="nav('loans',this)"><span class="nav-icon">&#8856;</span><span>Loans</span></div>
+  <div class="nav-item" onclick="nav('income',this)"><span class="nav-icon">&#8593;</span><span>Income</span></div>
   <div class="nav-item" onclick="nav('accounts',this)"><span class="nav-icon">&#9774;</span><span>Accounts</span></div>
   <div class="nav-item" onclick="nav('creditcards',this)"><span class="nav-icon">&#9635;</span><span>Credit Cards</span></div>
   <div class="nav-item" onclick="nav('transfers',this)"><span class="nav-icon">&#8644;</span><span>Transfers</span></div>
@@ -311,6 +312,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <button class="btn" onclick="exportCSV('loans')">Loan summary</button>
             <button class="btn" onclick="exportCSV('tenants')">Tenant roster</button>
           <button class="btn" onclick="exportCSV('schedC')">Schedule C (STR) expenses</button>
+          <button class="btn" onclick="exportCSV('income')">Income log</button>
           </div>
         </div></div>
         <div class="panel"><div class="panel-header"><span class="panel-title">Tax year summary</span></div><div class="panel-body" id="tax-summary"></div></div>
@@ -536,6 +538,70 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <thead><tr><th>Date paid</th><th>Card</th><th>Amount paid</th><th>Paid from account</th><th>Notes</th><th></th></tr></thead>
           <tbody id="cc-payment-table"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- INCOME -->
+    <div id="income" class="section">
+
+      <!-- Add income panel -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header"><span class="panel-title">Add income entry</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="field"><label>Date</label><input type="date" id="inc-date" style="width:138px"></div>
+            <div class="field"><label>Property</label><select id="inc-prop" style="width:180px"></select></div>
+            <div class="field"><label>Account received into</label><select id="inc-acct" style="width:200px"></select></div>
+            <div class="field"><label>Category</label>
+              <select id="inc-cat" style="width:190px">
+                <option>Rent</option>
+                <option>Bank bonus</option>
+                <option>Insurance proceeds</option>
+                <option>Late fee</option>
+                <option>Tenant reimbursement</option>
+                <option>Security deposit forfeiture</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field"><label>Amount ($)</label><input type="number" id="inc-amt" placeholder="0.00" style="width:120px"></div>
+          </div>
+          <div class="form-row">
+            <div class="field" style="flex:1"><label>Description</label><input id="inc-desc" placeholder="Optional notes" style="width:100%"></div>
+            <button class="btn primary" onclick="addIncome()">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="stat-grid" id="inc-stats" style="margin-bottom:16px"></div>
+
+      <!-- Income table -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">All income</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="incf-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderIncome()"><option value="">All properties</option></select>
+            <select id="incf-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderIncome()">
+              <option value="">All categories</option>
+              <option>Rent</option>
+              <option>Bank bonus</option>
+              <option>Insurance proceeds</option>
+              <option>Late fee</option>
+              <option>Tenant reimbursement</option>
+              <option>Security deposit forfeiture</option>
+              <option>Other</option>
+            </select>
+            <select id="incf-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderIncome()"><option value="">All years</option></select>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Property</th><th>Account</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+          <tbody id="income-table"></tbody>
+        </table>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3);display:flex;gap:24px">
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Total shown: <strong id="inc-total" style="color:var(--green)">$0</strong></span>
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Entries: <strong id="inc-count" style="color:var(--text)">0</strong></span>
+        </div>
       </div>
     </div>
 
@@ -843,6 +909,37 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT INCOME MODAL -->
+<div class="modal-bg" id="modal-edit-income">
+  <div class="modal">
+    <h3>Edit income entry</h3>
+    <input type="hidden" id="ei-i">
+    <div class="form-row">
+      <div class="field"><label>Date</label><input type="date" id="ei-date" style="width:138px"></div>
+      <div class="field"><label>Property</label><select id="ei-prop" style="width:180px"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Account received into</label><select id="ei-acct" style="width:200px"></select></div>
+      <div class="field"><label>Category</label>
+        <select id="ei-cat" style="width:190px">
+          <option>Rent</option><option>Bank bonus</option><option>Insurance proceeds</option>
+          <option>Late fee</option><option>Tenant reimbursement</option>
+          <option>Security deposit forfeiture</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Amount ($)</label><input type="number" id="ei-amt" style="width:140px"></div>
+      <div class="field" style="flex:1"><label>Description</label><input id="ei-desc" style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delIncomeFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-income')">Cancel</button>
+      <button class="btn primary" onclick="saveEditIncome()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT ACCOUNT MODAL -->
 <div class="modal-bg" id="modal-edit-acct">
   <div class="modal">
@@ -972,7 +1069,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 </div>
 
 <script>
-var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
+var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],income:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
 function save(){
   try{
@@ -1001,7 +1098,7 @@ var ini=function(n){return n?n.split(' ').map(function(w){return w[0];}).slice(0
 var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d;};
 var du=function(d){return d?Math.round((new Date(d+'T00:00')-tod())/86400000):999;};
 var CY=new Date().getFullYear();
-var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',accounts:'Accounts',creditcards:'Credit Cards',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
+var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',income:'Income',accounts:'Accounts',creditcards:'Credit Cards',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
 
 function nav(id,el){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
@@ -1011,7 +1108,7 @@ function nav(id,el){
   if(el){el.classList.add('active');}
   else{document.querySelectorAll('.nav-item').forEach(function(n){if(n.onclick&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+id+"'")>-1)n.classList.add('active');});}
   fillSelects();
-  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,accounts:renderAccounts,creditcards:renderCards,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
+  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,income:renderIncome,accounts:renderAccounts,creditcards:renderCards,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
   if(renders[id])renders[id]();
 }
 
@@ -1020,7 +1117,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop','ins-prop','ep2-prop'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop','ins-prop','ep2-prop','inc-prop','ei-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -1036,6 +1133,32 @@ function fillSelects(){
   }
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
+  // Income account dropdowns — grouped by type
+  ['inc-acct','ei-acct'].forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    var prev=el.value;
+    el.innerHTML='<option value="">-- select account --</option>';
+    if(S.accounts.length){var grpB=document.createElement('optgroup');grpB.label='Bank Accounts';S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value='acct_'+i;o.textContent=a.nick||a.bank+' ····'+a.last4;grpB.appendChild(o);});el.appendChild(grpB);}
+    if(S.cards.length){var grpC=document.createElement('optgroup');grpC.label='Credit Cards';S.cards.forEach(function(c,i){var o=document.createElement('option');o.value='card_'+i;o.textContent=c.nick||c.bank+' ····'+c.last4;grpC.appendChild(o);});el.appendChild(grpC);}
+    if(prev)el.value=prev;
+  });
+  // Income year filter
+  var incfYr=document.getElementById('incf-yr');
+  if(incfYr){
+    var prev=incfYr.value;
+    incfYr.innerHTML='<option value="">All years</option>';
+    var yrs=[...new Set((S.income||[]).map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();
+    yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;incfYr.appendChild(o);});
+    incfYr.value=prev;
+  }
+  // Income property filter
+  var incfProp=document.getElementById('incf-prop');
+  if(incfProp){
+    var prev2=incfProp.value;
+    incfProp.innerHTML='<option value="">All properties</option>';
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=p.address;o.textContent=sh(p.address);incfProp.appendChild(o);});
+    incfProp.value=prev2;
+  }
   // Expense 'Paid with' dropdown — grouped by type
   var eAcct=document.getElementById('e-acct');
   if(eAcct){
@@ -1633,6 +1756,7 @@ function renderDash(){
   var td=S.loans.reduce(function(a,l){return a+l.balance;},0);
   var mr=S.properties.filter(function(p){return p.type==='Rental';}).reduce(function(a,p){return a+p.rent;},0);
   var tex=S.expenses.reduce(function(a,e){return a+e.amount;},0);
+  var totalInc=(S.income||[]).filter(function(e){return e.date&&e.date.startsWith(String(new Date().getFullYear()));}).reduce(function(a,e){return a+e.amount;},0);
   var ded=S.expenses.filter(function(e){return e.deductible==='yes';}).reduce(function(a,e){return a+e.amount;},0);
   document.getElementById('dash-stats').innerHTML=
     '<div class="stat-card"><div class="s-label">Portfolio value</div><div class="s-val blue">'+fm(tv)+'</div><div class="s-sub">'+S.properties.length+' properties</div></div>'
@@ -1640,7 +1764,8 @@ function renderDash(){
     +'<div class="stat-card"><div class="s-label">Monthly rent</div><div class="s-val">'+fm(mr)+'</div><div class="s-sub">'+S.properties.filter(function(p){return p.type==='Rental';}).length+' rentals</div></div>'
     +'<div class="stat-card"><div class="s-label">Expenses YTD</div><div class="s-val red">'+fm(tex)+'</div></div>'
     +'<div class="stat-card"><div class="s-label">Deductible YTD</div><div class="s-val green">'+fm(ded)+'</div></div>'
-    +'<div class="stat-card"><div class="s-label">Active tenants</div><div class="s-val">'+S.tenants.length+'</div></div>';
+    +'<div class="stat-card"><div class="s-label">Active tenants</div><div class="s-val">'+S.tenants.length+'</div></div>'
+    +'<div class="stat-card"><div class="s-label">Income YTD</div><div class="s-val green">'+fm(totalInc)+'</div></div>';
   var rec=S.expenses.slice().sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,5);
   var de=document.getElementById('dash-exp');
   de.innerHTML=rec.length?rec.map(function(e){return '<tr><td>'+sh(S.properties[e.propIdx]&&S.properties[e.propIdx].address||'?')+'</td><td>'+(e.desc||e.category)+'</td><td style="font-family:\'DM Mono\',monospace">'+fm(e.amount)+'</td></tr>';}).join(''):'<tr><td colspan="3" class="empty">No expenses yet.</td></tr>';
@@ -1681,6 +1806,9 @@ function exportCSV(type){
   }else if(type==='rent'){
     header='Month,Tenant,Property,Expected,Received,Status,Notes\n';
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
+  }else if(type==='income'){
+    header='Date,Property,Account,Category,Description,Amount\n';
+    rows=(S.income||[]).map(function(e){var p=S.properties[parseInt(e.propAddr)];return e.date+',"'+(p?p.address:'')+'","'+paidWithLabel(e.acct||'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount;}).join('\n');
   }else if(type==='schedC'){
     header='Date,Property,LLC,Category,Description,Amount,Deductible,Schedule\n';
     rows=S.expenses.filter(function(e){return e.schedule==='C';}).map(function(e){var p=S.properties[e.propIdx];return e.date+',"'+(p?p.address:'')+'","'+(p&&p.llc?p.llc:'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+(e.deductible==='yes'?'Yes':'No')+',C';}).join('\n');
@@ -1958,6 +2086,103 @@ function renderCards(){
       +'<td style="color:var(--text2)">'+acct+'</td>'
       +'<td style="color:var(--text3)">'+(p.notes||'—')+'</td>'
       +'<td><button class="btn icon-btn danger" onclick="delCardPayment('+p._i+')">x</button></td>'
+      +'</tr>';
+  }).join('');
+}
+
+// INCOME
+function addIncome(){
+  var date=document.getElementById('inc-date').value;
+  var amt=parseFloat(document.getElementById('inc-amt').value)||0;
+  if(!date||!amt)return;
+  var pi=document.getElementById('inc-prop').value;
+  S.income=S.income||[];
+  S.income.push({
+    date:date,
+    propAddr:pi,
+    acct:document.getElementById('inc-acct').value||'',
+    category:document.getElementById('inc-cat').value,
+    amount:amt,
+    desc:document.getElementById('inc-desc').value.trim()
+  });
+  save();renderIncome();
+  ['inc-amt','inc-desc'].forEach(function(id){document.getElementById(id).value='';});
+}
+function openEditIncome(i){
+  var e=(S.income||[])[i];if(!e)return;
+  document.getElementById('ei-i').value=i;
+  document.getElementById('ei-date').value=e.date||'';
+  document.getElementById('ei-amt').value=e.amount||'';
+  document.getElementById('ei-desc').value=e.desc||'';
+  fillSelects();
+  document.getElementById('ei-cat').value=e.category||'Other';
+  var pp=document.getElementById('ei-prop');
+  if(pp){Array.from(pp.options).forEach(function(o){if(o.value==e.propAddr)o.selected=true;});}
+  var pa=document.getElementById('ei-acct');
+  if(pa)pa.value=e.acct||'';
+  openModal('edit-income');
+}
+function saveEditIncome(){
+  var i=parseInt(document.getElementById('ei-i').value);
+  if(isNaN(i)||!(S.income||[])[i])return;
+  S.income[i].date=document.getElementById('ei-date').value;
+  S.income[i].propAddr=document.getElementById('ei-prop').value;
+  S.income[i].acct=document.getElementById('ei-acct').value||'';
+  S.income[i].category=document.getElementById('ei-cat').value;
+  S.income[i].amount=parseFloat(document.getElementById('ei-amt').value)||0;
+  S.income[i].desc=document.getElementById('ei-desc').value.trim();
+  save();closeModal('edit-income');renderIncome();
+}
+function delIncomeFromModal(){
+  var i=parseInt(document.getElementById('ei-i').value);
+  if(!confirm('Delete this income entry?'))return;
+  S.income.splice(i,1);save();closeModal('edit-income');renderIncome();
+}
+function renderIncome(){
+  S.income=S.income||[];
+  fillSelects();
+  var fp=document.getElementById('incf-prop')&&document.getElementById('incf-prop').value;
+  var fc=document.getElementById('incf-cat')&&document.getElementById('incf-cat').value;
+  var fy=document.getElementById('incf-yr')&&document.getElementById('incf-yr').value;
+  var data=S.income.map(function(e,i){return Object.assign({},e,{_i:i});});
+  if(fp){data=data.filter(function(e){var p=S.properties[parseInt(e.propAddr)];return p&&p.address===fp;});}
+  if(fc)data=data.filter(function(e){return e.category===fc;});
+  if(fy)data=data.filter(function(e){return e.date&&e.date.startsWith(fy);});
+  data.sort(function(a,b){return b.date.localeCompare(a.date);});
+  var total=data.reduce(function(a,e){return a+e.amount;},0);
+  var cnt=document.getElementById('inc-count');if(cnt)cnt.textContent=data.length;
+  var tot=document.getElementById('inc-total');if(tot)tot.textContent=fm(total);
+
+  // Stats by category
+  var cats={};
+  S.income.forEach(function(e){cats[e.category]=(cats[e.category]||0)+e.amount;});
+  var statsEl=document.getElementById('inc-stats');
+  if(statsEl){
+    var totalAll=S.income.reduce(function(a,e){return a+e.amount;},0);
+    var curYrInc=S.income.filter(function(e){return e.date&&e.date.startsWith(String(new Date().getFullYear()));}).reduce(function(a,e){return a+e.amount;},0);
+    var rentTotal=(cats['Rent']||0);
+    var otherTotal=totalAll-rentTotal;
+    statsEl.innerHTML=
+      '<div class="stat-card"><div class="s-label">Total income YTD</div><div class="s-val green">'+fm(curYrInc)+'</div></div>'
+      +'<div class="stat-card"><div class="s-label">Rent collected</div><div class="s-val">'+fm(rentTotal)+'</div></div>'
+      +'<div class="stat-card"><div class="s-label">Other income</div><div class="s-val">'+fm(otherTotal)+'</div></div>'
+      +'<div class="stat-card"><div class="s-label">Total entries</div><div class="s-val">'+S.income.length+'</div></div>';
+  }
+
+  var tb=document.getElementById('income-table');if(!tb)return;
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No income entries yet.</td></tr>';return;}
+  tb.innerHTML=data.map(function(e){
+    var p=S.properties[parseInt(e.propAddr)];
+    var pname=p?sh(p.address):'—';
+    var acctLabel2=e.acct?paidWithLabel(e.acct):'—';
+    return '<tr>'
+      +'<td style="font-family:monospace;font-size:12px;white-space:nowrap">'+fd(e.date)+'</td>'
+      +'<td>'+pname+'</td>'
+      +'<td style="font-size:12px;color:var(--text2)">'+acctLabel2+'</td>'
+      +'<td><span class="badge green">'+e.category+'</span></td>'
+      +'<td style="color:var(--text2)">'+(e.desc||'—')+'</td>'
+      +'<td style="font-family:monospace;text-align:right"><strong style="color:var(--green)">'+fm(e.amount)+'</strong></td>'
+      +'<td><button class="btn icon-btn" onclick="openEditIncome('+e._i+')">&#9998;</button></td>'
       +'</tr>';
   }).join('');
 }
