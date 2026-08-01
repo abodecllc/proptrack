@@ -118,6 +118,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   <div class="nav-item" onclick="nav('cashflow',this)"><span class="nav-icon">&#8652;</span><span>Cashflow</span></div>
   <div class="nav-item" onclick="nav('loans',this)"><span class="nav-icon">&#8856;</span><span>Loans</span></div>
   <div class="nav-item" onclick="nav('income',this)"><span class="nav-icon">&#8593;</span><span>Income</span></div>
+  <div class="nav-item" onclick="nav('recurring',this)"><span class="nav-icon">&#8635;</span><span>Recurring</span></div>
   <div class="nav-item" onclick="nav('accounts',this)"><span class="nav-icon">&#9774;</span><span>Accounts</span></div>
   <div class="nav-item" onclick="nav('creditcards',this)"><span class="nav-icon">&#9635;</span><span>Credit Cards</span></div>
   <div class="nav-item" onclick="nav('transfers',this)"><span class="nav-icon">&#8644;</span><span>Transfers</span></div>
@@ -144,6 +145,11 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     </div>
   </div>
   <div class="content">
+
+    <!-- RECURRING DUE BANNER (shown on dashboard too) -->
+    <div id="dash-rec-banner" style="display:none;background:var(--amber-bg);border:1px solid rgba(212,168,75,0.4);border-radius:var(--radius-lg);padding:14px 20px;margin-bottom:16px;cursor:pointer" onclick="nav('recurring',null)">
+      <span style="color:var(--amber);font-weight:500">&#9888; Recurring expenses due — </span><span style="color:var(--text2);font-size:13px">click to review and log</span>
+    </div>
 
     <!-- DASHBOARD -->
     <div id="dashboard" class="section active">
@@ -610,6 +616,67 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       </div>
     </div>
 
+    <!-- RECURRING EXPENSES -->
+    <div id="recurring" class="section">
+
+      <!-- Due now banner — shown dynamically -->
+      <div id="rec-due-banner" style="display:none;background:var(--amber-bg);border:1px solid rgba(212,168,75,0.4);border-radius:var(--radius-lg);padding:18px 22px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div>
+            <div style="font-weight:500;font-size:15px;color:var(--amber)">&#9888; Recurring expenses ready to log</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:3px">Review amounts below — edit any that changed — then confirm to log all at once.</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="dismissDueBanner()">Dismiss</button>
+            <button class="btn primary" onclick="confirmDueExpenses()">Log all</button>
+          </div>
+        </div>
+        <div id="rec-due-list"></div>
+      </div>
+
+      <!-- Add recurring template -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header"><span class="panel-title">Add recurring expense template</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="field"><label>Property</label><select id="rec-prop" style="width:170px"></select></div>
+            <div class="field"><label>Category</label>
+              <select id="rec-cat" style="width:180px">
+                <option>Mortgage interest</option><option>HOA fees</option><option>Property tax</option>
+                <option>Insurance</option><option>Utilities</option><option>Property management</option>
+                <option>Repairs &amp; maintenance</option><option>Professional fees</option><option>Other deductible</option><option>Non-deductible</option>
+              </select>
+            </div>
+            <div class="field"><label>Description</label><input id="rec-desc" placeholder="e.g. HOA — 8 Wembley" style="width:180px"></div>
+            <div class="field"><label>Amount ($)</label><input type="number" id="rec-amt" placeholder="0.00" style="width:120px"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Frequency</label>
+              <select id="rec-freq" style="width:130px">
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="annual">Annual</option>
+              </select>
+            </div>
+            <div class="field"><label>Day of month due</label><input type="number" id="rec-day" placeholder="1-31" min="1" max="31" style="width:130px"></div>
+            <div class="field"><label>Paid with</label><select id="rec-acct" style="width:200px"><option value="">-- select account --</option></select></div>
+            <div class="field"><label>Deductible</label><select id="rec-ded" style="width:105px"><option value="yes">Yes</option><option value="no">No</option></select></div>
+            <div class="field"><label>Start from</label><input type="month" id="rec-start" style="width:148px" title="First month this recurs — PropTrack will generate entries from here forward"></div>
+            <button class="btn primary" onclick="addRecurring()">Add template</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Template list -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Active templates</span></div>
+        <table>
+          <thead><tr><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Frequency</th><th>Due day</th><th>Paid with</th><th>Last logged</th><th></th></tr></thead>
+          <tbody id="rec-table"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ACCOUNTS -->
     <div id="accounts" class="section">
       <div class="panel" style="margin-bottom:16px"><div class="panel-header"><span class="panel-title">Add account</span></div><div class="panel-body">
@@ -914,6 +981,43 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT RECURRING MODAL -->
+<div class="modal-bg" id="modal-edit-rec">
+  <div class="modal">
+    <h3>Edit recurring template</h3>
+    <input type="hidden" id="er-i">
+    <div class="form-row">
+      <div class="field"><label>Property</label><select id="er-prop" style="width:170px"></select></div>
+      <div class="field"><label>Category</label>
+        <select id="er-cat" style="width:180px">
+          <option>Mortgage interest</option><option>HOA fees</option><option>Property tax</option>
+          <option>Insurance</option><option>Utilities</option><option>Property management</option>
+          <option>Repairs &amp; maintenance</option><option>Professional fees</option><option>Other deductible</option><option>Non-deductible</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Description</label><input id="er-desc" style="width:100%"></div>
+      <div class="field"><label>Amount ($)</label><input type="number" id="er-amt" style="width:120px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Frequency</label>
+        <select id="er-freq" style="width:130px">
+          <option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="annual">Annual</option>
+        </select>
+      </div>
+      <div class="field"><label>Day of month due</label><input type="number" id="er-day" min="1" max="31" style="width:130px"></div>
+      <div class="field"><label>Paid with</label><select id="er-acct" style="width:200px"></select></div>
+      <div class="field"><label>Deductible</label><select id="er-ded" style="width:105px"><option value="yes">Yes</option><option value="no">No</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delRecFromModal()" style="margin-right:auto">Delete template</button>
+      <button class="btn" onclick="closeModal('edit-rec')">Cancel</button>
+      <button class="btn primary" onclick="saveEditRec()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT INCOME MODAL -->
 <div class="modal-bg" id="modal-edit-income">
   <div class="modal">
@@ -1075,7 +1179,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 </div>
 
 <script>
-var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],income:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
+var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],income:[],recurring:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
 function save(){
   try{
@@ -1104,7 +1208,7 @@ var ini=function(n){return n?n.split(' ').map(function(w){return w[0];}).slice(0
 var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d;};
 var du=function(d){return d?Math.round((new Date(d+'T00:00')-tod())/86400000):999;};
 var CY=new Date().getFullYear();
-var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',income:'Income',accounts:'Accounts',creditcards:'Credit Cards',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
+var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',income:'Income',recurring:'Recurring Expenses',accounts:'Accounts',creditcards:'Credit Cards',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
 
 function nav(id,el){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
@@ -1114,7 +1218,7 @@ function nav(id,el){
   if(el){el.classList.add('active');}
   else{document.querySelectorAll('.nav-item').forEach(function(n){if(n.onclick&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+id+"'")>-1)n.classList.add('active');});}
   fillSelects();
-  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,income:renderIncome,accounts:renderAccounts,creditcards:renderCards,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
+  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,income:renderIncome,recurring:renderRecurring,accounts:renderAccounts,creditcards:renderCards,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
   if(renders[id])renders[id]();
 }
 
@@ -1123,7 +1227,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop','ins-prop','ep2-prop','inc-prop','ei-prop'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop','ins-prop','ep2-prop','inc-prop','ei-prop','rec-prop','er-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -1139,8 +1243,8 @@ function fillSelects(){
   }
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
-  // Income account dropdowns — grouped by type
-  ['inc-acct','ei-acct'].forEach(function(id){
+  // Income + Recurring account dropdowns — grouped by type
+  ['inc-acct','ei-acct','rec-acct','er-acct'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     var prev=el.value;
     el.innerHTML='<option value="">-- select account --</option>';
@@ -1739,7 +1843,7 @@ function renderRem(){
   if(!S.reminders.length){el.innerHTML='<div class="empty">No reminders yet.</div>';return;}
   var sorted=S.reminders.map(function(r,i){return Object.assign({},r,{_i:i});}).sort(function(a,b){if(a.done&&!b.done)return 1;if(!a.done&&b.done)return -1;return a.due.localeCompare(b.due);});
   el.innerHTML=sorted.map(function(r){
-    var dd2=du(r.due);var p=S.properties[r.propIdx];
+    var dd2=du(r.due);var p=r.propIdx==='card'?null:S.properties[r.propIdx];
     var ug=r.done?'gray':dd2<0?'red':dd2<=7?'amber':'green';
     var lbl=r.done?'Done':dd2<0?Math.abs(dd2)+'d overdue':dd2===0?'Today':dd2===1?'Tomorrow':'In '+dd2+'d';
     return '<div class="panel" style="margin-bottom:8px;'+(r.done?'opacity:0.5;':'')+'">'
@@ -1747,7 +1851,7 @@ function renderRem(){
       +'<div class="r-dot" style="background:var(--'+ug+');margin-top:0"></div>'
       +'<div style="flex:1">'
       +'<div style="font-weight:500;'+(r.done?'text-decoration:line-through;color:var(--text3);':'')+'">'+r.task+'</div>'
-      +'<div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-top:2px">'+(p?sh(p.address):'?')+' &middot; '+r.category+' &middot; '+fd(r.due)+(r.recurring?' &middot; '+r.recurring:'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-top:2px">'+(r.propIdx==='card'?(r.cardOwner==='personal'?'Personal':r.cardOwner):p?sh(p.address):'?')+' &middot; '+r.category+' &middot; '+fd(r.due)+(r.recurring?' &middot; '+r.recurring:'')+'</div>'
       +'</div>'
       +'<span class="badge '+ug+'" style="min-width:84px;text-align:center">'+lbl+'</span>'
       +'<button class="btn sm '+(r.done?'':'success')+'" onclick="togRem('+r._i+')">'+(r.done?'Undo':'Done')+'</button>'
@@ -1777,7 +1881,7 @@ function renderDash(){
   de.innerHTML=rec.length?rec.map(function(e){return '<tr><td>'+sh(S.properties[e.propIdx]&&S.properties[e.propIdx].address||'?')+'</td><td>'+(e.desc||e.category)+'</td><td style="font-family:\'DM Mono\',monospace">'+fm(e.amount)+'</td></tr>';}).join(''):'<tr><td colspan="3" class="empty">No expenses yet.</td></tr>';
   var ur=S.reminders.filter(function(r){return !r.done;}).slice().sort(function(a,b){return a.due.localeCompare(b.due);}).slice(0,4);
   var dr=document.getElementById('dash-rem');
-  dr.innerHTML=ur.length?ur.map(function(r){var dd2=du(r.due);var ug=dd2<0?'red':dd2<=7?'amber':'green';var lbl=dd2<0?Math.abs(dd2)+'d overdue':dd2===0?'Today':dd2===1?'Tomorrow':'In '+dd2+'d';return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)"><div class="r-dot" style="background:var(--'+ug+')"></div><div style="flex:1;font-size:13px">'+r.task+' <span style="color:var(--text3)">— '+sh(S.properties[r.propIdx]&&S.properties[r.propIdx].address||'?')+'</span></div><span style="font-size:11px;font-family:\'DM Mono\',monospace;color:var(--'+ug+')">'+lbl+'</span></div>';}).join(''):'<div class="empty" style="padding:20px">No upcoming reminders.</div>';
+  dr.innerHTML=ur.length?ur.map(function(r){var dd2=du(r.due);var ug=dd2<0?'red':dd2<=7?'amber':'green';var lbl=dd2<0?Math.abs(dd2)+'d overdue':dd2===0?'Today':dd2===1?'Tomorrow':'In '+dd2+'d';var rPropName=r.propIdx==='card'?(r.cardOwner==='personal'?'Personal':r.cardOwner||'Personal'):sh(S.properties[r.propIdx]&&S.properties[r.propIdx].address||'?');return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)"><div class="r-dot" style="background:var(--'+ug+')"></div><div style="flex:1;font-size:13px">'+r.task+' <span style="color:var(--text3)">— '+rPropName+'</span></div><span style="font-size:11px;font-family:\'DM Mono\',monospace;color:var(--'+ug+')">'+lbl+'</span></div>';}).join(''):'<div class="empty" style="padding:20px">No upcoming reminders.</div>';
   var tm=new Date().toISOString().slice(0,7);
   var drt=document.getElementById('dash-rent');
   if(!S.tenants.length){drt.innerHTML='<div class="empty">No tenants added.</div>';}
@@ -1974,10 +2078,10 @@ function autoCreateCardReminders(cardIdx,card){
   var label=cardLabel(card)+' payment due';
   // 7 days before
   var d7=new Date(due);d7.setDate(d7.getDate()-7);
-  S.reminders.push({propIdx:0,task:label,due:fmt2(d7),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx});
+  S.reminders.push({propIdx:'card',task:label,due:fmt2(d7),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx,cardOwner:card.owner||'personal'});
   // 3 days before
   var d3=new Date(due);d3.setDate(d3.getDate()-3);
-  S.reminders.push({propIdx:0,task:label+' — 3 days',due:fmt2(d3),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx});
+  S.reminders.push({propIdx:'card',task:label+' — 3 days',due:fmt2(d3),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx,cardOwner:card.owner||'personal'});
 }
 function openEditCard(i){
   var c=S.cards[i];if(!c)return;
@@ -2093,6 +2197,174 @@ function renderCards(){
       +'<td style="color:var(--text2)">'+acct+'</td>'
       +'<td style="color:var(--text3)">'+(p.notes||'—')+'</td>'
       +'<td><button class="btn icon-btn danger" onclick="delCardPayment('+p._i+')">x</button></td>'
+      +'</tr>';
+  }).join('');
+}
+
+// RECURRING EXPENSES
+function addRecurring(){
+  var pi=document.getElementById('rec-prop').value;
+  var amt=parseFloat(document.getElementById('rec-amt').value)||0;
+  var day=parseInt(document.getElementById('rec-day').value)||1;
+  var start=document.getElementById('rec-start').value;
+  if(!amt||!start)return;
+  S.recurring=S.recurring||[];
+  S.recurring.push({
+    propAddr:pi,
+    category:document.getElementById('rec-cat').value,
+    desc:document.getElementById('rec-desc').value.trim(),
+    amount:amt,
+    freq:document.getElementById('rec-freq').value,
+    day:day,
+    acct:document.getElementById('rec-acct').value||'',
+    deductible:document.getElementById('rec-ded').value,
+    startMonth:start,
+    lastLogged:null
+  });
+  save();renderRecurring();checkDueRecurring();
+  ['rec-amt','rec-desc','rec-day','rec-start'].forEach(function(id){document.getElementById(id).value='';});
+}
+function openEditRec(i){
+  var r=(S.recurring||[])[i];if(!r)return;
+  document.getElementById('er-i').value=i;
+  document.getElementById('er-desc').value=r.desc||'';
+  document.getElementById('er-amt').value=r.amount||'';
+  document.getElementById('er-day').value=r.day||'';
+  document.getElementById('er-freq').value=r.freq||'monthly';
+  document.getElementById('er-ded').value=r.deductible||'yes';
+  fillSelects();
+  document.getElementById('er-cat').value=r.category||'HOA fees';
+  var pp=document.getElementById('er-prop');
+  if(pp){Array.from(pp.options).forEach(function(o){if(o.value==r.propAddr)o.selected=true;});}
+  var pa=document.getElementById('er-acct');if(pa)pa.value=r.acct||'';
+  openModal('edit-rec');
+}
+function saveEditRec(){
+  var i=parseInt(document.getElementById('er-i').value);
+  if(isNaN(i)||!(S.recurring||[])[i])return;
+  S.recurring[i].propAddr=document.getElementById('er-prop').value;
+  S.recurring[i].category=document.getElementById('er-cat').value;
+  S.recurring[i].desc=document.getElementById('er-desc').value.trim();
+  S.recurring[i].amount=parseFloat(document.getElementById('er-amt').value)||0;
+  S.recurring[i].freq=document.getElementById('er-freq').value;
+  S.recurring[i].day=parseInt(document.getElementById('er-day').value)||1;
+  S.recurring[i].acct=document.getElementById('er-acct').value||'';
+  S.recurring[i].deductible=document.getElementById('er-ded').value;
+  save();closeModal('edit-rec');renderRecurring();
+}
+function delRecFromModal(){
+  var i=parseInt(document.getElementById('er-i').value);
+  if(!confirm('Delete this recurring template? Previously logged expenses are kept.'))return;
+  S.recurring.splice(i,1);save();closeModal('edit-rec');renderRecurring();
+}
+
+function isDue(r){
+  S.recurring=S.recurring||[];
+  var now=new Date();
+  var curYear=now.getFullYear();
+  var curMonth=now.getMonth()+1;
+  var curDay=now.getDate();
+  // Parse lastLogged
+  var lastYear=0,lastMonth=0;
+  if(r.lastLogged){
+    var lp=r.lastLogged.split('-');
+    lastYear=parseInt(lp[0]);lastMonth=parseInt(lp[1]);
+  }
+  // Parse startMonth
+  var startYear=0,startMonth=0;
+  if(r.startMonth){
+    var sp=r.startMonth.split('-');
+    startYear=parseInt(sp[0]);startMonth=parseInt(sp[1]);
+  }
+  // Check if we've passed the due day this period and haven't logged it yet
+  function monthsApart(y1,m1,y2,m2){return (y2-y1)*12+(m2-m1);}
+  var monthsSinceStart=monthsApart(startYear,startMonth,curYear,curMonth);
+  if(monthsSinceStart<0)return false; // hasn't started yet
+  var freqMonths={monthly:1,quarterly:3,annual:12}[r.freq]||1;
+  // Is this a due month?
+  var isDueMonth=(monthsSinceStart%freqMonths===0)&&curDay>=r.day;
+  if(!isDueMonth)return false;
+  // Already logged this period?
+  if(lastYear===curYear&&lastMonth===curMonth)return false;
+  // Also check if due in a previous month that was missed
+  if(lastYear===0&&lastMonth===0)return true; // never logged
+  var monthsSinceLogged=monthsApart(lastYear,lastMonth,curYear,curMonth);
+  return monthsSinceLogged>=freqMonths;
+}
+
+function checkDueRecurring(){
+  S.recurring=S.recurring||[];
+  var due=S.recurring.map(function(r,i){return Object.assign({},r,{_i:i});}).filter(isDue);
+  var banner=document.getElementById('rec-due-banner');
+  if(!banner)return;
+  var dashBanner=document.getElementById('dash-rec-banner');
+  if(!due.length){banner.style.display='none';if(dashBanner)dashBanner.style.display='none';return;}
+  if(dashBanner)dashBanner.style.display='block';
+  banner.style.display='block';
+  var list=document.getElementById('rec-due-list');
+  list.innerHTML=due.map(function(r){
+    var p=S.properties[parseInt(r.propAddr)];
+    var pname=p?sh(p.address):'General';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(212,168,75,0.2)">'
+      +'<div style="flex:1;font-size:13px"><strong>'+( r.desc||r.category)+'</strong> <span style="color:var(--text3)">— '+pname+'</span></div>'
+      +'<div style="font-size:12px;color:var(--text3);font-family:monospace">'+r.category+' &middot; '+r.freq+'</div>'
+      +'<div class="field" style="margin:0"><input type="number" id="due-amt-'+r._i+'" value="'+r.amount+'" style="width:110px;font-family:monospace"></div>'
+      +'<span style="font-size:12px;color:var(--text3)">'+paidWithLabel(r.acct)+'</span>'
+      +'</div>';
+  }).join('');
+  banner.dataset.dueIds=JSON.stringify(due.map(function(r){return r._i;}));
+}
+
+function confirmDueExpenses(){
+  var ids=JSON.parse(document.getElementById('rec-due-banner').dataset.dueIds||'[]');
+  var now=new Date();
+  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  var curYM=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  ids.forEach(function(i){
+    var r=S.recurring[i];if(!r)return;
+    var amt=parseFloat(document.getElementById('due-amt-'+i).value)||r.amount;
+    var p=S.properties[parseInt(r.propAddr)];
+    var sched='E';
+    if(p&&p.strStart&&p.strEnd&&todayStr>=p.strStart&&todayStr<=p.strEnd)sched='C';
+    S.expenses.push({propIdx:parseInt(r.propAddr),date:todayStr,category:r.category,desc:r.desc||r.category,amount:amt,deductible:r.deductible,paidWith:r.acct||'',schedule:sched,fromRecurring:true});
+    S.recurring[i].lastLogged=curYM;
+  });
+  save();
+  document.getElementById('rec-due-banner').style.display='none';
+  renderRecurring();
+  // Show success
+  var banner=document.getElementById('rec-due-banner');
+  banner.style.display='block';
+  banner.style.background='var(--green-bg)';
+  banner.style.borderColor='rgba(76,175,125,0.4)';
+  banner.innerHTML='<div style="font-size:14px;color:var(--green);font-weight:500">&#10003; '+ids.length+' expense'+(ids.length>1?'s':'')+' logged successfully.</div>';
+  setTimeout(function(){banner.style.display='none';banner.style.background='var(--amber-bg)';banner.style.borderColor='rgba(212,168,75,0.4)';},3000);
+}
+
+function dismissDueBanner(){
+  document.getElementById('rec-due-banner').style.display='none';
+}
+
+function renderRecurring(){
+  S.recurring=S.recurring||[];
+  fillSelects();
+  checkDueRecurring();
+  var tb=document.getElementById('rec-table');if(!tb)return;
+  if(!S.recurring.length){tb.innerHTML='<tr><td colspan="9" class="empty">No recurring templates yet.</td></tr>';return;}
+  tb.innerHTML=S.recurring.map(function(r,i){
+    var p=S.properties[parseInt(r.propAddr)];
+    var pname=p?sh(p.address):'General';
+    var freqLabel={monthly:'Monthly',quarterly:'Quarterly',annual:'Annual'}[r.freq]||r.freq;
+    return '<tr>'
+      +'<td>'+pname+'</td>'
+      +'<td><span class="badge gray">'+r.category+'</span></td>'
+      +'<td style="font-weight:500">'+(r.desc||'—')+'</td>'
+      +'<td style="font-family:monospace"><strong>'+fm(r.amount)+'</strong></td>'
+      +'<td><span class="badge '+(r.freq==='monthly'?'blue':r.freq==='quarterly'?'amber':'green')+'">'+freqLabel+'</span></td>'
+      +'<td style="font-family:monospace;text-align:center">'+r.day+'</td>'
+      +'<td style="font-size:12px;color:var(--text2)">'+paidWithLabel(r.acct||'')+'</td>'
+      +'<td style="font-size:12px;color:var(--text3);font-family:monospace">'+(r.lastLogged||'Never')+'</td>'
+      +'<td><button class="btn icon-btn" onclick="openEditRec('+i+')">&#9998;</button></td>'
       +'</tr>';
   }).join('');
 }
@@ -2831,6 +3103,7 @@ function valueAge(p){
 fillSelects();
 renderDash();
 updateSync();
+checkDueRecurring();
 // Check if local data differs from last push
 (function(){
   try{
