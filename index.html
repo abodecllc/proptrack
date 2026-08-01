@@ -554,7 +554,6 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <div class="field"><label>Account received into</label><select id="inc-acct" style="width:200px"></select></div>
             <div class="field"><label>Category</label>
               <select id="inc-cat" style="width:190px">
-                <option>Rent</option>
                 <option>Bank bonus</option>
                 <option>Insurance proceeds</option>
                 <option>Late fee</option>
@@ -583,7 +582,6 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <select id="incf-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderIncome()"><option value="">All properties</option></select>
             <select id="incf-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderIncome()">
               <option value="">All categories</option>
-              <option>Rent</option>
               <option>Bank bonus</option>
               <option>Insurance proceeds</option>
               <option>Late fee</option>
@@ -922,7 +920,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Account received into</label><select id="ei-acct" style="width:200px"></select></div>
       <div class="field"><label>Category</label>
         <select id="ei-cat" style="width:190px">
-          <option>Rent</option><option>Bank bonus</option><option>Insurance proceeds</option>
+          <option>Bank bonus</option><option>Insurance proceeds</option>
           <option>Late fee</option><option>Tenant reimbursement</option>
           <option>Security deposit forfeiture</option><option>Other</option>
         </select>
@@ -2164,8 +2162,7 @@ function renderIncome(){
     var otherTotal=totalAll-rentTotal;
     statsEl.innerHTML=
       '<div class="stat-card"><div class="s-label">Total income YTD</div><div class="s-val green">'+fm(curYrInc)+'</div></div>'
-      +'<div class="stat-card"><div class="s-label">Rent collected</div><div class="s-val">'+fm(rentTotal)+'</div></div>'
-      +'<div class="stat-card"><div class="s-label">Other income</div><div class="s-val">'+fm(otherTotal)+'</div></div>'
+      +'<div class="stat-card"><div class="s-label">Non-rent income</div><div class="s-val">'+fm(totalAll)+'</div></div>'
       +'<div class="stat-card"><div class="s-label">Total entries</div><div class="s-val">'+S.income.length+'</div></div>';
   }
 
