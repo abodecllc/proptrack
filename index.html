@@ -206,7 +206,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <select id="ef-ded" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All types</option><option value="yes">Deductible</option><option value="no">Non-ded.</option></select>
             <select id="ef-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All years</option></select>
             <select id="ef-sched" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All schedules</option><option value="E">Schedule E (rental)</option><option value="C">Schedule C (STR)</option></select>
-            <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select>
+            <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select>
           </div>
         </div>
         <table><thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Paid with</th><th>Type</th><th></th></tr></thead><tbody id="exp-table"></tbody></table>
@@ -560,6 +560,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
                 <option>Tenant reimbursement</option>
                 <option>Security deposit forfeiture</option>
                 <option>Other</option>
+                <optgroup label="STR / Schedule C"><option>STR — Airbnb payout</option><option>STR — VRBO payout</option><option>STR — Direct booking</option><option>STR — Cleaning fee received</option><option>STR — Other</option></optgroup>
               </select>
             </div>
             <div class="field"><label>Amount ($)</label><input type="number" id="inc-amt" placeholder="0.00" style="width:120px"></div>
@@ -588,6 +589,12 @@ tr:hover td{background:rgba(255,255,255,0.015)}
               <option>Tenant reimbursement</option>
               <option>Security deposit forfeiture</option>
               <option>Other</option>
+              <option>STR — Airbnb payout</option>
+              <option>STR — VRBO payout</option>
+              <option>STR — Direct booking</option>
+              <option>STR — Cleaning fee received</option>
+              <option>STR — Other</option>
+              <option value="__str__">All STR income</option>
             </select>
             <select id="incf-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderIncome()"><option value="">All years</option></select>
           </div>
@@ -923,6 +930,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <option>Bank bonus</option><option>Insurance proceeds</option>
           <option>Late fee</option><option>Tenant reimbursement</option>
           <option>Security deposit forfeiture</option><option>Other</option>
+          <optgroup label="STR / Schedule C"><option>STR — Airbnb payout</option><option>STR — VRBO payout</option><option>STR — Direct booking</option><option>STR — Cleaning fee received</option><option>STR — Other</option></optgroup>
         </select>
       </div>
     </div>
@@ -1806,7 +1814,8 @@ function exportCSV(type){
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
   }else if(type==='income'){
     header='Date,Property,Account,Category,Description,Amount\n';
-    rows=(S.income||[]).map(function(e){var p=S.properties[parseInt(e.propAddr)];return e.date+',"'+(p?p.address:'')+'","'+paidWithLabel(e.acct||'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount;}).join('\n');
+    rows=(S.income||[]).map(function(e){var p=S.properties[parseInt(e.propAddr)];var sched=e.category&&e.category.startsWith('STR —')?'C':'';return e.date+',"'+(p?p.address:'')+'","'+paidWithLabel(e.acct||'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+sched;}).join('\n');
+    header='Date,Property,Account,Category,Description,Amount,Schedule\n';
   }else if(type==='schedC'){
     header='Date,Property,LLC,Category,Description,Amount,Deductible,Schedule\n';
     rows=S.expenses.filter(function(e){return e.schedule==='C';}).map(function(e){var p=S.properties[e.propIdx];return e.date+',"'+(p?p.address:'')+'","'+(p&&p.llc?p.llc:'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+(e.deductible==='yes'?'Yes':'No')+',C';}).join('\n');
@@ -2144,7 +2153,8 @@ function renderIncome(){
   var fy=document.getElementById('incf-yr')&&document.getElementById('incf-yr').value;
   var data=S.income.map(function(e,i){return Object.assign({},e,{_i:i});});
   if(fp){data=data.filter(function(e){var p=S.properties[parseInt(e.propAddr)];return p&&p.address===fp;});}
-  if(fc)data=data.filter(function(e){return e.category===fc;});
+  if(fc==='__str__'){data=data.filter(function(e){return e.category&&e.category.startsWith('STR —');});}
+  else if(fc)data=data.filter(function(e){return e.category===fc;});
   if(fy)data=data.filter(function(e){return e.date&&e.date.startsWith(fy);});
   data.sort(function(a,b){return b.date.localeCompare(a.date);});
   var total=data.reduce(function(a,e){return a+e.amount;},0);
