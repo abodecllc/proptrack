@@ -1511,12 +1511,16 @@ function addExpense(){
       var loan=S.loans.find(function(l){return l.propIdx==pi;});
       if(loan&&loan.interestPct){interest=Math.round(a*(loan.interestPct/100)*100)/100;}
     }
+    var mPaidWith=(document.getElementById('e-acct')&&document.getElementById('e-acct').value)||'';
+    var mSched='E';
+    var mProp=S.properties[pi];
+    if(mProp&&mProp.strStart&&mProp.strEnd&&d>=mProp.strStart&&d<=mProp.strEnd){mSched='C';}
     if(interest>0&&interest<a){
       var principal=Math.round((a-interest)*100)/100;
-      S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:desc||'Mortgage - interest portion',amount:Math.round(interest*100)/100,deductible:'yes'});
-      S.expenses.push({propIdx:pi,date:d,category:'Mortgage principal',desc:desc||'Mortgage - principal portion',amount:principal,deductible:'no'});
+      S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:desc||'Mortgage - interest portion',amount:Math.round(interest*100)/100,deductible:'yes',paidWith:mPaidWith,schedule:mSched});
+      S.expenses.push({propIdx:pi,date:d,category:'Mortgage principal',desc:desc||'Mortgage - principal portion',amount:principal,deductible:'no',paidWith:mPaidWith,schedule:mSched});
     } else {
-      S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:(desc||'Mortgage payment')+' [enter interest portion to split]',amount:a,deductible:'yes'});
+      S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:(desc||'Mortgage payment')+' [enter interest portion to split]',amount:a,deductible:'yes',paidWith:mPaidWith,schedule:mSched});
     }
   } else {
     var sched='E';
