@@ -2288,12 +2288,32 @@ function isDue(r){
   // Is this a due month?
   var isDueMonth=(monthsSinceStart%freqMonths===0)&&curDay>=r.day;
   if(!isDueMonth)return false;
-  // Already logged this period?
+  // Already logged this period per the template's own bookkeeping?
   if(lastYear===curYear&&lastMonth===curMonth)return false;
+  // Scan actual expense history — a manually entered expense for this
+  // property/category in the current period should suppress the prompt.
+  if(alreadyInExpenses(r,curYear,curMonth))return false;
   // Also check if due in a previous month that was missed
   if(lastYear===0&&lastMonth===0)return true; // never logged
   var monthsSinceLogged=monthsApart(lastYear,lastMonth,curYear,curMonth);
   return monthsSinceLogged>=freqMonths;
+}
+
+// Returns true if an expense matching this recurring template already exists
+// in the given year/month, regardless of how it was entered.
+function alreadyInExpenses(r,y,m){
+  var pi=parseInt(r.propAddr);
+  if(isNaN(pi))return false;
+  var prefix=y+'-'+String(m).padStart(2,'0');
+  // A 'Mortgage payment' template produces 'Mortgage interest' + 'Mortgage principal'
+  var cats=r.category==='Mortgage payment'
+    ? ['Mortgage payment','Mortgage interest','Mortgage principal']
+    : [r.category];
+  return S.expenses.some(function(e){
+    return e.propIdx===pi
+      && e.date && e.date.indexOf(prefix)===0
+      && cats.indexOf(e.category)>-1;
+  });
 }
 
 function checkDueRecurring(){
