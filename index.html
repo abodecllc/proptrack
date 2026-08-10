@@ -2299,6 +2299,25 @@ function isDue(r){
   return monthsSinceLogged>=freqMonths;
 }
 
+// Returns the most recent YYYY-MM in which a matching expense exists for this
+// template, or null. Used so 'Last logged' reflects reality rather than only
+// the template's own bookkeeping field.
+function lastSeenInExpenses(r){
+  var pi=parseInt(r.propAddr);
+  if(isNaN(pi))return null;
+  var cats=r.category==='Mortgage payment'
+    ? ['Mortgage payment','Mortgage interest','Mortgage principal']
+    : [r.category];
+  var best=null;
+  S.expenses.forEach(function(e){
+    if(e.propIdx!==pi||!e.date)return;
+    if(cats.indexOf(e.category)===-1)return;
+    var ym=e.date.slice(0,7);
+    if(!best||ym>best)best=ym;
+  });
+  return best;
+}
+
 // Returns true if an expense matching this recurring template already exists
 // in the given year/month, regardless of how it was entered.
 function alreadyInExpenses(r,y,m){
@@ -2400,7 +2419,7 @@ function renderRecurring(){
       +'<td><span class="badge '+(r.freq==='monthly'?'blue':r.freq==='quarterly'?'amber':'green')+'">'+freqLabel+'</span></td>'
       +'<td style="font-family:monospace;text-align:center">'+r.day+'</td>'
       +'<td style="font-size:12px;color:var(--text2)">'+paidWithLabel(r.acct||'')+'</td>'
-      +'<td style="font-size:12px;color:var(--text3);font-family:monospace">'+(r.lastLogged||'Never')+'</td>'
+      +'<td style="font-size:12px;color:var(--text3);font-family:monospace">'+(function(){var seen=lastSeenInExpenses(r);if(!seen)return 'Never';return seen+(r.lastLogged===seen?'':' <span style="color:var(--text3);font-size:10px">(manual)</span>');})()+'</td>'
       +'<td><button class="btn icon-btn" onclick="openEditRec('+i+')">&#9998;</button></td>'
       +'</tr>';
   }).join('');
