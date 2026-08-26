@@ -113,6 +113,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">&#8962;</span><span>Dashboard</span></div>
   <div class="nav-item" onclick="nav('properties',this)"><span class="nav-icon">&#8862;</span><span>Properties</span></div>
   <div class="nav-item" onclick="nav('networth',this)"><span class="nav-icon">&#9672;</span><span>Net Worth</span></div>
+  <div class="nav-item" onclick="nav('assets',this)"><span class="nav-icon">&#9781;</span><span>Assets</span></div>
   <div class="nav-section">Financials</div>
   <div class="nav-item" onclick="nav('expenses',this)"><span class="nav-icon">$</span><span>Expenses</span></div>
   <div class="nav-item" onclick="nav('cashflow',this)"><span class="nav-icon">&#8652;</span><span>Cashflow</span></div>
@@ -224,8 +225,6 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       </div>
     </div>
 
-    </div><!-- /expenses -->
-
     <!-- CASHFLOW -->
     <div id="cashflow" class="section">
       <div class="stat-grid" id="cf-stats"></div>
@@ -319,6 +318,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <button class="btn" onclick="exportCSV('tenants')">Tenant roster</button>
           <button class="btn" onclick="exportCSV('schedC')">Schedule C (STR) expenses</button>
           <button class="btn" onclick="exportCSV('income')">Income log</button>
+          <button class="btn" onclick="exportCSV('assets')">Capital asset register</button>
           </div>
         </div></div>
         <div class="panel"><div class="panel-header"><span class="panel-title">Tax year summary</span></div><div class="panel-body" id="tax-summary"></div></div>
@@ -544,6 +544,113 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <thead><tr><th>Date paid</th><th>Card</th><th>Amount paid</th><th>Paid from account</th><th>Notes</th><th></th></tr></thead>
           <tbody id="cc-payment-table"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- CAPITAL ASSETS -->
+    <div id="assets" class="section">
+
+      <div class="stat-grid" id="asset-stats" style="margin-bottom:16px"></div>
+
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header"><span class="panel-title">Add asset</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="field"><label>Property</label><select id="as-prop" style="width:170px"></select></div>
+            <div class="field"><label>Asset</label><input id="as-name" placeholder="Refrigerator" style="width:170px"></div>
+            <div class="field"><label>Category</label>
+              <select id="as-cat" style="width:170px" onchange="suggestAssetClass(this.value,'as-class')">
+                <option>Appliance</option><option>HVAC</option><option>Water heater</option>
+                <option>Flooring</option><option>Roof</option><option>Windows</option>
+                <option>Furniture (STR)</option><option>Electronics</option>
+                <option>Landscaping / Land improvement</option><option>Structural</option><option>Other</option>
+              </select>
+            </div>
+            <div class="field"><label>Location</label><input id="as-loc" placeholder="Kitchen" style="width:130px"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Brand</label><input id="as-brand" placeholder="LG" style="width:130px"></div>
+            <div class="field"><label>Model</label><input id="as-model" placeholder="LRFVS3006S" style="width:160px"></div>
+            <div class="field"><label>Serial number</label><input id="as-serial" placeholder="Serial #" style="width:180px"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Purchase date</label><input type="date" id="as-date" style="width:145px"></div>
+            <div class="field"><label>Purchase price ($)</label><input type="number" id="as-price" placeholder="0.00" style="width:140px"></div>
+            <div class="field"><label>Purchased from</label><input id="as-from" placeholder="Home Depot" style="width:150px"></div>
+            <div class="field"><label>Paid with</label><select id="as-acct" style="width:190px"><option value="">-- select account --</option></select></div>
+          </div>
+          <div class="form-row" style="background:var(--bg3);padding:12px 14px;border-radius:var(--radius);align-items:flex-end">
+            <div class="field"><label>Mfr. warranty expires</label><input type="date" id="as-warr" style="width:150px"></div>
+            <div class="field"><label>Extended warranty</label><select id="as-ext" style="width:110px" onchange="document.getElementById('as-ext-fields').style.display=this.value==='yes'?'flex':'none'"><option value="no">No</option><option value="yes">Yes</option></select></div>
+            <div id="as-ext-fields" style="display:none;gap:10px;align-items:flex-end">
+              <div class="field"><label>Provider</label><input id="as-ext-prov" placeholder="Asurion, Best Buy..." style="width:150px"></div>
+              <div class="field"><label>Ext. expires</label><input type="date" id="as-ext-exp" style="width:145px"></div>
+              <div class="field"><label>Ext. cost ($)</label><input type="number" id="as-ext-cost" placeholder="0.00" style="width:120px"></div>
+            </div>
+          </div>
+          <div class="form-row" style="background:var(--bg3);padding:12px 14px;border-radius:var(--radius);align-items:flex-end">
+            <div class="field"><label>Tax treatment</label>
+              <select id="as-tax" style="width:230px">
+                <option value="undecided">Not yet determined — ask accountant</option>
+                <option value="capitalized">Capitalized (depreciate)</option>
+                <option value="expensed">Expensed (de minimis safe harbor)</option>
+              </select>
+            </div>
+            <div class="field"><label>Recovery period</label>
+              <select id="as-class" style="width:190px">
+                <option value="5">5-year (appliances, furniture)</option>
+                <option value="7">7-year</option>
+                <option value="15">15-year (land improvements)</option>
+                <option value="27.5">27.5-year (structural)</option>
+                <option value="0">N/A</option>
+              </select>
+            </div>
+            <span style="font-size:11px;color:var(--text3);padding-bottom:8px">Your accountant makes the final call on treatment and elections.</span>
+          </div>
+          <div class="form-row">
+            <div class="field" style="flex:1"><label>Notes</label><input id="as-notes" placeholder="Receipt location, installer, quirks..." style="width:100%"></div>
+            <button class="btn primary" onclick="addAsset()">Add asset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Asset register</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="asf-prop" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderAssets()"><option value="">All properties</option></select>
+            <select id="asf-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderAssets()">
+              <option value="">All categories</option>
+              <option>Appliance</option><option>HVAC</option><option>Water heater</option>
+              <option>Flooring</option><option>Roof</option><option>Windows</option>
+              <option>Furniture (STR)</option><option>Electronics</option>
+              <option>Landscaping / Land improvement</option><option>Structural</option><option>Other</option>
+            </select>
+            <select id="asf-warr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderAssets()">
+              <option value="">All warranties</option>
+              <option value="active">Under warranty</option>
+              <option value="expiring">Expiring within 90 days</option>
+              <option value="expired">Warranty expired</option>
+            </select>
+            <select id="asf-status" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderAssets()">
+              <option value="active">Active only</option>
+              <option value="">Include disposed</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Property</th><th>Asset</th><th>Brand / Model</th><th>Purchased</th><th style="text-align:right">Cost</th><th>Warranty</th><th>Treatment</th><th style="text-align:right">Est. book value</th><th></th></tr></thead>
+          <tbody id="asset-table"></tbody>
+        </table>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3);display:flex;gap:24px;flex-wrap:wrap">
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Assets shown: <strong id="as-count" style="color:var(--text)">0</strong></span>
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Total cost: <strong id="as-total" style="color:var(--text)">$0</strong></span>
+          <span style="font-size:11px;font-family:monospace;color:var(--text3)">Est. remaining basis: <strong id="as-basis" style="color:var(--text)">$0</strong></span>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
+        &#9432; Book value shown is a simplified straight-line estimate for planning only. Actual depreciation depends on elections (de minimis safe harbor, Section 179, bonus depreciation) and conventions your accountant applies at filing. Use the Export tab to hand them the register.
       </div>
     </div>
 
@@ -981,6 +1088,77 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT ASSET MODAL -->
+<div class="modal-bg" id="modal-edit-asset">
+  <div class="modal" style="max-width:640px">
+    <h3>Edit asset</h3>
+    <input type="hidden" id="ea2-i">
+    <div class="form-row">
+      <div class="field"><label>Property</label><select id="ea2-prop" style="width:170px"></select></div>
+      <div class="field"><label>Asset</label><input id="ea2-name" style="width:170px"></div>
+      <div class="field"><label>Category</label>
+        <select id="ea2-cat" style="width:170px">
+          <option>Appliance</option><option>HVAC</option><option>Water heater</option>
+          <option>Flooring</option><option>Roof</option><option>Windows</option>
+          <option>Furniture (STR)</option><option>Electronics</option>
+          <option>Landscaping / Land improvement</option><option>Structural</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Location</label><input id="ea2-loc" style="width:130px"></div>
+      <div class="field"><label>Brand</label><input id="ea2-brand" style="width:130px"></div>
+      <div class="field"><label>Model</label><input id="ea2-model" style="width:160px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Serial number</label><input id="ea2-serial" style="width:100%"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Purchase date</label><input type="date" id="ea2-date" style="width:145px"></div>
+      <div class="field"><label>Purchase price ($)</label><input type="number" id="ea2-price" style="width:140px"></div>
+      <div class="field"><label>Purchased from</label><input id="ea2-from" style="width:150px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Paid with</label><select id="ea2-acct" style="width:200px"></select></div>
+      <div class="field"><label>Mfr. warranty expires</label><input type="date" id="ea2-warr" style="width:150px"></div>
+    </div>
+    <div class="form-row" style="background:var(--bg3);padding:12px 14px;border-radius:var(--radius)">
+      <div class="field"><label>Extended warranty</label><select id="ea2-ext" style="width:110px"><option value="no">No</option><option value="yes">Yes</option></select></div>
+      <div class="field"><label>Provider</label><input id="ea2-ext-prov" style="width:150px"></div>
+      <div class="field"><label>Ext. expires</label><input type="date" id="ea2-ext-exp" style="width:145px"></div>
+      <div class="field"><label>Ext. cost ($)</label><input type="number" id="ea2-ext-cost" style="width:120px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Tax treatment</label>
+        <select id="ea2-tax" style="width:230px">
+          <option value="undecided">Not yet determined</option>
+          <option value="capitalized">Capitalized (depreciate)</option>
+          <option value="expensed">Expensed (de minimis)</option>
+        </select>
+      </div>
+      <div class="field"><label>Recovery period</label>
+        <select id="ea2-class" style="width:190px">
+          <option value="5">5-year</option><option value="7">7-year</option>
+          <option value="15">15-year</option><option value="27.5">27.5-year</option><option value="0">N/A</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="background:var(--bg3);padding:12px 14px;border-radius:var(--radius)">
+      <div class="field"><label>Status</label><select id="ea2-status" style="width:150px"><option value="active">Active</option><option value="disposed">Replaced / disposed</option></select></div>
+      <div class="field"><label>Disposal date</label><input type="date" id="ea2-disp-date" style="width:145px"></div>
+      <div class="field"><label>Sale / salvage ($)</label><input type="number" id="ea2-disp-amt" style="width:140px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Notes</label><input id="ea2-notes" style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delAssetFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-asset')">Cancel</button>
+      <button class="btn primary" onclick="saveEditAsset()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT RECURRING MODAL -->
 <div class="modal-bg" id="modal-edit-rec">
   <div class="modal">
@@ -1179,7 +1357,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 </div>
 
 <script>
-var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],income:[],recurring:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
+var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],income:[],recurring:[],assets:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
 function save(){
   try{
@@ -1208,7 +1386,7 @@ var ini=function(n){return n?n.split(' ').map(function(w){return w[0];}).slice(0
 var tod=function(){var d=new Date();d.setHours(0,0,0,0);return d;};
 var du=function(d){return d?Math.round((new Date(d+'T00:00')-tod())/86400000):999;};
 var CY=new Date().getFullYear();
-var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',income:'Income',recurring:'Recurring Expenses',accounts:'Accounts',creditcards:'Credit Cards',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
+var pageTitles={dashboard:'Dashboard',properties:'Properties',networth:'Net Worth',assets:'Capital Assets',expenses:'Expenses',cashflow:'Cashflow',loans:'Loans',income:'Income',recurring:'Recurring Expenses',accounts:'Accounts',creditcards:'Credit Cards',transfers:'Transfers',insurance:'Insurance',vendors:'Vendors',tenants:'Tenants',rent:'Rent Log',reminders:'Reminders',export:'Export',settings:'Settings'};
 
 function nav(id,el){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
@@ -1218,7 +1396,7 @@ function nav(id,el){
   if(el){el.classList.add('active');}
   else{document.querySelectorAll('.nav-item').forEach(function(n){if(n.onclick&&n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'"+id+"'")>-1)n.classList.add('active');});}
   fillSelects();
-  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,expenses:renderExp,cashflow:renderCF,loans:renderLoans,income:renderIncome,recurring:renderRecurring,accounts:renderAccounts,creditcards:renderCards,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
+  var renders={dashboard:renderDash,properties:renderProps,networth:renderNW,assets:renderAssets,expenses:renderExp,cashflow:renderCF,loans:renderLoans,income:renderIncome,recurring:renderRecurring,accounts:renderAccounts,creditcards:renderCards,transfers:renderTransfers,insurance:renderInsurance,vendors:renderVendors,tenants:renderTenants,rent:renderRentLog,reminders:renderRem,export:renderExport};
   if(renders[id])renders[id]();
 }
 
@@ -1227,7 +1405,7 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
 function fillSelects(){
-  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop','ins-prop','ep2-prop','inc-prop','ei-prop','rec-prop','er-prop'].forEach(function(id){
+  ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop','ins-prop','ep2-prop','inc-prop','ei-prop','rec-prop','er-prop','as-prop','ea2-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
@@ -1244,7 +1422,7 @@ function fillSelects(){
   var efy=document.getElementById('ef-yr');
   if(efy){var cyv=efy.value;efy.innerHTML='<option value="">All years</option>';var yrs=[...new Set(S.expenses.map(function(e){return e.date?e.date.slice(0,4):null;}).filter(Boolean))].sort().reverse();yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;efy.appendChild(o);});efy.value=cyv;}
   // Income + Recurring account dropdowns — grouped by type
-  ['inc-acct','ei-acct','rec-acct','er-acct'].forEach(function(id){
+  ['inc-acct','ei-acct','rec-acct','er-acct','as-acct','ea2-acct'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     var prev=el.value;
     el.innerHTML='<option value="">-- select account --</option>';
@@ -1252,6 +1430,14 @@ function fillSelects(){
     if(S.cards.length){var grpC=document.createElement('optgroup');grpC.label='Credit Cards';S.cards.forEach(function(c,i){var o=document.createElement('option');o.value='card_'+i;o.textContent=c.nick||c.bank+' ····'+c.last4;grpC.appendChild(o);});el.appendChild(grpC);}
     if(prev)el.value=prev;
   });
+  // Asset property filter
+  var asfProp=document.getElementById('asf-prop');
+  if(asfProp){
+    var asfpv=asfProp.value;
+    asfProp.innerHTML='<option value="">All properties</option>';
+    S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=p.address;o.textContent=sh(p.address);asfProp.appendChild(o);});
+    asfProp.value=asfpv;
+  }
   // Income year filter
   var incfYr=document.getElementById('incf-yr');
   if(incfYr){
@@ -1920,6 +2106,12 @@ function exportCSV(type){
   }else if(type==='rent'){
     header='Month,Tenant,Property,Expected,Received,Status,Notes\n';
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
+  }else if(type==='assets'){
+    header='Property,LLC,Asset,Category,Location,Brand,Model,Serial,Purchase Date,Cost,Purchased From,Paid With,Mfr Warranty Expires,Extended Warranty,Ext Provider,Ext Expires,Ext Cost,Tax Treatment,Recovery Period (yrs),Status,Disposal Date,Disposal Amount,Est Book Value,Notes\n';
+    rows=(S.assets||[]).map(function(a){
+      var p=S.properties[parseInt(a.propAddr)];
+      return ['"'+(p?p.address:'')+'"','"'+(p&&p.llc?p.llc:'')+'"','"'+(a.name||'')+'"','"'+(a.category||'')+'"','"'+(a.location||'')+'"','"'+(a.brand||'')+'"','"'+(a.model||'')+'"','"'+(a.serial||'')+'"',a.date||'',a.price||0,'"'+(a.from||'')+'"','"'+paidWithLabel(a.acct||'')+'"',a.warranty||'',(a.ext==='yes'?'Yes':'No'),'"'+(a.extProv||'')+'"',a.extExp||'',a.extCost||0,'"'+(a.tax||'undecided')+'"',(a.recovery||''),(a.status||'active'),(a.dispDate||''),(a.dispAmt||0),assetBookValue(a),'"'+(a.notes||'').replace(/"/g,'')+'"'].join(',');
+    }).join('\n');
   }else if(type==='income'){
     header='Date,Property,Account,Category,Description,Amount\n';
     rows=(S.income||[]).map(function(e){var p=S.properties[parseInt(e.propAddr)];var sched=e.category&&e.category.startsWith('STR —')?'C':'';return e.date+',"'+(p?p.address:'')+'","'+paidWithLabel(e.acct||'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+sched;}).join('\n');
@@ -2202,6 +2394,214 @@ function renderCards(){
       +'<td style="color:var(--text3)">'+(p.notes||'—')+'</td>'
       +'<td><button class="btn icon-btn danger" onclick="delCardPayment('+p._i+')">x</button></td>'
       +'</tr>';
+  }).join('');
+}
+
+// CAPITAL ASSETS
+function suggestAssetClass(cat,targetId){
+  var map={'Appliance':'5','Furniture (STR)':'5','Electronics':'5','HVAC':'27.5','Water heater':'27.5',
+    'Flooring':'5','Roof':'27.5','Windows':'27.5','Landscaping / Land improvement':'15','Structural':'27.5','Other':'5'};
+  var el=document.getElementById(targetId);
+  if(el&&map[cat])el.value=map[cat];
+}
+
+// Simplified straight-line estimate. Planning only — not a filing calculation.
+function assetBookValue(a){
+  var yrs=parseFloat(a.recovery||0);
+  var cost=parseFloat(a.price||0);
+  if(a.tax==='expensed')return 0;
+  if(!yrs||!cost||!a.date)return cost;
+  var start=new Date(a.date+'T00:00');
+  var end=a.status==='disposed'&&a.dispDate?new Date(a.dispDate+'T00:00'):new Date();
+  var yearsElapsed=(end-start)/(365.25*86400000);
+  if(yearsElapsed<0)yearsElapsed=0;
+  var accum=Math.min(cost,(cost/yrs)*yearsElapsed);
+  return Math.max(0,Math.round((cost-accum)*100)/100);
+}
+
+function warrantyState(a){
+  var dates=[a.warranty,a.extExp].filter(Boolean);
+  if(!dates.length)return{label:'None on file',cls:'gray',days:null};
+  var best=dates.sort().reverse()[0];
+  var d=du(best);
+  if(d<0)return{label:'Expired '+fd(best),cls:'red',days:d};
+  if(d<=90)return{label:'Expires in '+d+'d',cls:'amber',days:d};
+  return{label:'Covered to '+fd(best),cls:'green',days:d};
+}
+
+function readAssetForm(p){
+  var g=function(id){var el=document.getElementById(p+id);return el?el.value:'';};
+  var acct=document.getElementById(p+'acct');
+  return {
+    propAddr:g('prop'),
+    name:g('name').trim(),
+    category:g('cat'),
+    location:g('loc').trim(),
+    brand:g('brand').trim(),
+    model:g('model').trim(),
+    serial:g('serial').trim(),
+    date:g('date'),
+    price:parseFloat(g('price'))||0,
+    from:g('from').trim(),
+    acct:acct?acct.value:'',
+    warranty:g('warr'),
+    ext:g('ext'),
+    extProv:g('ext-prov').trim(),
+    extExp:g('ext-exp'),
+    extCost:parseFloat(g('ext-cost'))||0,
+    tax:g('tax'),
+    recovery:g('class'),
+    notes:g('notes').trim()
+  };
+}
+
+function addAsset(){
+  var a=readAssetForm('as-');
+  if(!a.name)return;
+  a.status='active';
+  S.assets=S.assets||[];
+  S.assets.push(a);
+  autoCreateWarrantyReminder(a);
+  save();fillSelects();renderAssets();
+  ['as-name','as-loc','as-brand','as-model','as-serial','as-price','as-from','as-warr','as-ext-prov','as-ext-exp','as-ext-cost','as-notes'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+}
+
+function autoCreateWarrantyReminder(a){
+  var dates=[a.warranty,a.extExp].filter(Boolean);
+  if(!dates.length)return;
+  var best=dates.sort().reverse()[0];
+  var d=new Date(best+'T00:00');
+  d.setDate(d.getDate()-30);
+  var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(du(ds)<0)return; // already past — no point
+  S.reminders.push({
+    propIdx:parseInt(a.propAddr),
+    task:a.name+' warranty expires '+fd(best),
+    due:ds,category:'Other',priority:'Medium',recurring:'',done:false
+  });
+}
+
+function openEditAsset(i){
+  var a=(S.assets||[])[i];if(!a)return;
+  document.getElementById('ea2-i').value=i;
+  var s=function(id,v){var el=document.getElementById('ea2-'+id);if(el)el.value=v||'';};
+  s('name',a.name);s('loc',a.location);s('brand',a.brand);s('model',a.model);s('serial',a.serial);
+  s('date',a.date);s('price',a.price);s('from',a.from);s('warr',a.warranty);
+  s('ext-prov',a.extProv);s('ext-exp',a.extExp);s('ext-cost',a.extCost);s('notes',a.notes);
+  s('disp-date',a.dispDate);s('disp-amt',a.dispAmt);
+  fillSelects();
+  document.getElementById('ea2-cat').value=a.category||'Appliance';
+  document.getElementById('ea2-ext').value=a.ext||'no';
+  document.getElementById('ea2-tax').value=a.tax||'undecided';
+  document.getElementById('ea2-class').value=a.recovery||'5';
+  document.getElementById('ea2-status').value=a.status||'active';
+  var pp=document.getElementById('ea2-prop');
+  if(pp)Array.from(pp.options).forEach(function(o){if(o.value==a.propAddr)o.selected=true;});
+  var pa=document.getElementById('ea2-acct');if(pa)pa.value=a.acct||'';
+  openModal('edit-asset');
+}
+
+function saveEditAsset(){
+  var i=parseInt(document.getElementById('ea2-i').value);
+  if(isNaN(i)||!(S.assets||[])[i])return;
+  var a=readAssetForm('ea2-');
+  a.status=document.getElementById('ea2-status').value;
+  a.dispDate=document.getElementById('ea2-disp-date').value;
+  a.dispAmt=parseFloat(document.getElementById('ea2-disp-amt').value)||0;
+  S.assets[i]=a;
+  save();closeModal('edit-asset');fillSelects();renderAssets();
+}
+
+function delAssetFromModal(){
+  var i=parseInt(document.getElementById('ea2-i').value);
+  if(!confirm('Delete this asset from the register?'))return;
+  S.assets.splice(i,1);save();closeModal('edit-asset');renderAssets();
+}
+
+function assetToExpense(i){
+  var a=S.assets[i];if(!a)return;
+  var expNav=Array.from(document.querySelectorAll('.nav-item')).find(function(n){return n.getAttribute('onclick')&&n.getAttribute('onclick').indexOf("'expenses'")>-1;});
+  nav('expenses',expNav);
+  var manualTab=document.querySelector('.tab');
+  if(manualTab)expTab('manual',manualTab);
+  setTimeout(function(){
+    var set=function(id,v){var el=document.getElementById(id);if(el)el.value=v;};
+    set('e-date',a.date||new Date().toISOString().slice(0,10));
+    var pe=document.getElementById('e-prop');
+    if(pe&&a.propAddr!=='')pe.value=parseInt(a.propAddr);
+    set('e-desc',(a.brand?a.brand+' ':'')+a.name+(a.from?' \u2014 '+a.from:''));
+    set('e-amt',a.price||'');
+    set('e-cat',a.tax==='expensed'?'Repairs & maintenance':'Capital improvement');
+    set('e-ded','yes');
+    var ea=document.getElementById('e-acct');if(ea&&a.acct)ea.value=a.acct;
+    var amt=document.getElementById('e-amt');
+    if(amt){amt.style.outline='2px solid var(--accent)';amt.focus();setTimeout(function(){amt.style.outline='';},2000);}
+  },100);
+}
+
+function renderAssets(){
+  S.assets=S.assets||[];
+  fillSelects();
+  var fp=document.getElementById('asf-prop'), fc=document.getElementById('asf-cat');
+  var fw=document.getElementById('asf-warr'), fs=document.getElementById('asf-status');
+  fp=fp?fp.value:''; fc=fc?fc.value:''; fw=fw?fw.value:''; fs=fs?fs.value:'active';
+
+  var data=S.assets.map(function(a,i){return Object.assign({},a,{_i:i});});
+  if(fs==='active')data=data.filter(function(a){return (a.status||'active')==='active';});
+  if(fp)data=data.filter(function(a){var p=S.properties[parseInt(a.propAddr)];return p&&p.address===fp;});
+  if(fc)data=data.filter(function(a){return a.category===fc;});
+  if(fw)data=data.filter(function(a){
+    var w=warrantyState(a);
+    if(fw==='active')return w.cls==='green';
+    if(fw==='expiring')return w.cls==='amber';
+    if(fw==='expired')return w.cls==='red';
+    return true;
+  });
+  data.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+
+  var totalCost=data.reduce(function(s,a){return s+(a.price||0);},0);
+  var totalBasis=data.reduce(function(s,a){return s+assetBookValue(a);},0);
+  var setTxt=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  setTxt('as-count',data.length);
+  setTxt('as-total',fm(totalCost));
+  setTxt('as-basis',fm(totalBasis));
+
+  // Stat cards
+  var all=S.assets.filter(function(a){return (a.status||'active')==='active';});
+  var expiringSoon=all.filter(function(a){return warrantyState(a).cls==='amber';}).length;
+  var capitalized=all.filter(function(a){return a.tax==='capitalized';}).length;
+  var undecided=all.filter(function(a){return !a.tax||a.tax==='undecided';}).length;
+  var statsEl=document.getElementById('asset-stats');
+  if(statsEl){
+    statsEl.innerHTML=
+      '<div class="stat-card"><div class="s-label">Active assets</div><div class="s-val">'+all.length+'</div></div>'
+      +'<div class="stat-card"><div class="s-label">Total cost basis</div><div class="s-val">'+fm(all.reduce(function(s,a){return s+(a.price||0);},0))+'</div></div>'
+      +'<div class="stat-card"><div class="s-label">Warranty expiring</div><div class="s-val '+(expiringSoon?'amber':'')+'">'+expiringSoon+'</div><div class="s-sub">within 90 days</div></div>'
+      +'<div class="stat-card"><div class="s-label">Capitalized</div><div class="s-val">'+capitalized+'</div></div>'
+      +'<div class="stat-card"><div class="s-label">Needs review</div><div class="s-val '+(undecided?'amber':'')+'">'+undecided+'</div><div class="s-sub">treatment undecided</div></div>';
+  }
+
+  var tb=document.getElementById('asset-table');if(!tb)return;
+  if(!data.length){tb.innerHTML='<tr><td colspan="9" class="empty">No assets in the register yet.</td></tr>';return;}
+  var taxLabel={capitalized:['Capitalized','blue'],expensed:['Expensed','gray'],undecided:['Review','amber']};
+  tb.innerHTML=data.map(function(a){
+    var p=S.properties[parseInt(a.propAddr)];
+    var w=warrantyState(a);
+    var t=taxLabel[a.tax||'undecided']||taxLabel.undecided;
+    var disposed=(a.status||'active')==='disposed';
+    return '<tr'+(disposed?' style="opacity:0.5"':'')+'>'
+      +'<td>'+(p?sh(p.address):'\u2014')+'</td>'
+      +'<td><strong>'+a.name+'</strong>'+(a.location?'<div style="font-size:11px;color:var(--text3)">'+a.location+'</div>':'')+'</td>'
+      +'<td style="font-size:12px;color:var(--text2)">'+(a.brand||'\u2014')+(a.model?'<div style="font-family:monospace;font-size:11px;color:var(--text3)">'+a.model+'</div>':'')+'</td>'
+      +'<td style="font-family:monospace;font-size:12px;white-space:nowrap">'+(a.date?fd(a.date):'\u2014')+'</td>'
+      +'<td style="font-family:monospace;text-align:right">'+fm(a.price)+'</td>'
+      +'<td><span class="badge '+w.cls+'" style="white-space:nowrap">'+w.label+'</span></td>'
+      +'<td><span class="badge '+t[1]+'">'+t[0]+'</span>'+(a.tax==='capitalized'&&a.recovery&&a.recovery!=='0'?'<div style="font-size:10px;color:var(--text3);font-family:monospace">'+a.recovery+'-yr</div>':'')+'</td>'
+      +'<td style="font-family:monospace;text-align:right;color:var(--text2)">'+(disposed?'\u2014':fm(assetBookValue(a)))+'</td>'
+      +'<td style="white-space:nowrap">'
+      +'<button class="btn sm" onclick="assetToExpense('+a._i+')" style="color:var(--green)" title="Log purchase as an expense">+ Exp</button> '
+      +'<button class="btn icon-btn" onclick="openEditAsset('+a._i+')">&#9998;</button>'
+      +'</td></tr>';
   }).join('');
 }
 
