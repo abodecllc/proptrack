@@ -167,6 +167,12 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 
     <!-- PROPERTIES -->
     <div id="properties" class="section">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <select id="pf-status" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderProps()">
+          <option value="active">Active only</option>
+          <option value="">Include sold</option>
+        </select>
+      </div>
       <div class="prop-grid" id="prop-grid"></div>
     </div>
 
@@ -319,6 +325,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <button class="btn" onclick="exportCSV('schedC')">Schedule C (STR) expenses</button>
           <button class="btn" onclick="exportCSV('income')">Income log</button>
           <button class="btn" onclick="exportCSV('assets')">Capital asset register</button>
+          <button class="btn" onclick="exportCSV('disposition')">Property disposition / basis worksheet</button>
           </div>
         </div></div>
         <div class="panel"><div class="panel-header"><span class="panel-title">Tax year summary</span></div><div class="panel-body" id="tax-summary"></div></div>
@@ -1346,6 +1353,30 @@ tr:hover td{background:rgba(255,255,255,0.015)}
         <div class="field"><label>STR end date</label><input type="date" id="ep-str-end" style="width:150px"></div>
       </div>
     </div>
+    <div id="ep-sale-block" style="background:var(--bg3);border:1px solid rgba(212,168,75,0.3);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px">
+      <div class="form-row" style="margin-bottom:10px">
+        <div class="field"><label>Status</label>
+          <select id="ep-status" style="width:170px" onchange="document.getElementById('ep-sale-fields').style.display=this.value==='sold'?'block':'none'">
+            <option value="active">Active — owned</option>
+            <option value="sold">Sold</option>
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--text3);align-self:flex-end;padding-bottom:8px">Marking sold preserves all history and removes it from active portfolio totals.</span>
+      </div>
+      <div id="ep-sale-fields" style="display:none">
+        <div class="form-row">
+          <div class="field"><label>Closing date</label><input type="date" id="ep-sale-date" style="width:145px"></div>
+          <div class="field"><label>Gross sale price ($)</label><input type="number" id="ep-sale-price" oninput="renderBasisReadout(parseInt(document.getElementById('ep-i').value))" placeholder="0.00" style="width:150px"></div>
+          <div class="field"><label>Selling costs ($)</label><input type="number" id="ep-sale-costs" oninput="renderBasisReadout(parseInt(document.getElementById('ep-i').value))" placeholder="Commission, transfer tax, attorney" style="width:150px" title="Commission, transfer tax, attorney fees, credits to buyer"></div>
+          <div class="field"><label>Mortgage payoff ($)</label><input type="number" id="ep-sale-payoff" oninput="renderBasisReadout(parseInt(document.getElementById('ep-i').value))" placeholder="0.00" style="width:150px"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Accumulated depreciation ($)</label><input type="number" id="ep-sale-depr" oninput="renderBasisReadout(parseInt(document.getElementById('ep-i').value))" placeholder="From accountant" style="width:190px" title="Your accountant provides this — needed for gain and recapture"></div>
+          <div class="field" style="flex:1"><label>Closing notes</label><input id="ep-sale-notes" placeholder="Buyer, title company, 1031 QI if applicable" style="width:100%"></div>
+        </div>
+        <div id="ep-basis-readout" style="margin-top:8px;padding:10px 12px;background:var(--bg2);border-radius:6px;font-size:12px;font-family:monospace;color:var(--text2);line-height:1.9"></div>
+      </div>
+    </div>
     <div class="form-row"><div class="field" style="flex:1"><label>Notes</label><textarea id="ep-notes" style="width:100%;height:60px;resize:vertical"></textarea></div></div>
     <div class="form-row"><div class="field" style="flex:1"><label>Google Drive folder link</label><div style="display:flex;gap:0"><input id="ep-drive" placeholder="Paste Google Drive folder URL" style="width:100%;border-radius:var(--radius) 0 0 var(--radius);border-right:none"><a id="ep-drive-link" href="#" target="_blank" style="display:flex;align-items:center;padding:0 12px;height:34px;background:var(--bg4);border:1px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;font-size:12px;color:var(--accent);text-decoration:none;white-space:nowrap" onclick="updateDriveLink()">Open &#8599;</a></div></div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
@@ -1596,6 +1627,15 @@ function openEditProp(i){
   document.getElementById('ep-llc').value=p.llc||'';
   document.getElementById('ep-notes').value=p.notes||'';
   document.getElementById('ep-drive').value=p.drive||'';
+  document.getElementById('ep-status').value=p.status||'active';
+  document.getElementById('ep-sale-date').value=p.saleDate||'';
+  document.getElementById('ep-sale-price').value=p.salePrice||'';
+  document.getElementById('ep-sale-costs').value=p.saleCosts||'';
+  document.getElementById('ep-sale-payoff').value=p.salePayoff||'';
+  document.getElementById('ep-sale-depr').value=p.saleDepr||'';
+  document.getElementById('ep-sale-notes').value=p.saleNotes||'';
+  document.getElementById('ep-sale-fields').style.display=(p.status==='sold')?'block':'none';
+  renderBasisReadout(i);
   document.getElementById('ep-str-start').value=p.strStart||'';
   document.getElementById('ep-str-end').value=p.strEnd||'';
   document.getElementById('ep-str-dates').style.display=p.type==='Short-term rental (STR)'?'block':'none';
@@ -1605,7 +1645,15 @@ function openEditProp(i){
 }
 function saveProp(){
   var i=parseInt(document.getElementById('ep-i').value);
-  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim(),strStart:document.getElementById('ep-str-start').value,strEnd:document.getElementById('ep-str-end').value};
+  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevStatus=S.properties[i].status||'active';var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim(),strStart:document.getElementById('ep-str-start').value,strEnd:document.getElementById('ep-str-end').value,
+    status:document.getElementById('ep-status').value,
+    saleDate:document.getElementById('ep-sale-date').value,
+    salePrice:parseFloat(document.getElementById('ep-sale-price').value)||0,
+    saleCosts:parseFloat(document.getElementById('ep-sale-costs').value)||0,
+    salePayoff:parseFloat(document.getElementById('ep-sale-payoff').value)||0,
+    saleDepr:parseFloat(document.getElementById('ep-sale-depr').value)||0,
+    saleNotes:document.getElementById('ep-sale-notes').value.trim()};
+  if(S.properties[i].status==='sold'&&prevStatus!=='sold'){onPropertySold(i);}
   save();closeModal('edit-prop');renderProps();fillSelects();
 }
 function delPropModal(){
@@ -1620,23 +1668,36 @@ function delPropModal(){
 }
 function renderProps(){
   var el=document.getElementById('prop-grid');
+  var pfs=document.getElementById('pf-status');
+  var hideSold=pfs?pfs.value==='active':true;
   if(!S.properties.length){el.innerHTML='<div class="empty" style="grid-column:1/-1"><div style="font-size:32px;opacity:.3;margin-bottom:8px">&#8962;</div>No properties yet.<br><br><button class="btn primary" onclick="openModal(\'add-prop\')">+ Add first property</button></div>';return;}
-  el.innerHTML=S.properties.map(function(p,i){
+  el.innerHTML=S.properties.map(function(p,i){return {p:p,i:i};})
+    .filter(function(x){return !(hideSold&&isSold(x.p));})
+    .map(function(x){
+    var p=x.p, i=x.i;
     var exp=S.expenses.filter(function(e){return e.propIdx==i;}).reduce(function(a,e){return a+e.amount;},0);
     var loan=S.loans.find(function(l){return l.propIdx==i;});
     var equity=p.value-(loan?loan.balance:0);
     var tenant=S.tenants.find(function(t){return t.propIdx==i;});
     var cls=p.type==='Primary home'?'primary-home':'rental';
-    return '<div class="prop-card '+cls+'" onclick="openEditProp('+i+')">'
-      +'<h4>'+sh(p.address)+'</h4>'
+    var sold=isSold(p);
+    var dsum=sold?dispositionSummary(i):null;
+    return '<div class="prop-card '+cls+'" onclick="openEditProp('+i+')"'+(sold?' style="opacity:0.62;border-left-color:var(--text3)"':'')+'>'
+      +'<h4>'+sh(p.address)+(sold?' <span class="badge gray" style="vertical-align:middle;font-size:10px">SOLD</span>':'')+'</h4>'
       +'<div class="prop-sub">'+p.type.toUpperCase()+(p.llc?' &middot; '+p.llc:'')+(p.sqft?' &middot; '+Number(p.sqft).toLocaleString()+' SQ FT':'')+(p.year?' &middot; BUILT '+p.year:'')+'</div>'
       +(p.type==='Short-term rental (STR)'&&p.strStart&&p.strEnd?'<div style="font-size:11px;color:var(--amber);font-family:monospace;margin-top:4px">STR period: '+fd(p.strStart)+' &rarr; '+fd(p.strEnd)+'</div>':'')
-      +'<div class="prop-stats">'
+      +(sold?'<div class="prop-stats">'
+        +'<div class="prop-stat"><div class="ps-label">Sold</div><div class="ps-val">'+(p.saleDate?fd(p.saleDate):'\u2014')+'</div></div>'
+        +'<div class="prop-stat"><div class="ps-label">Sale price</div><div class="ps-val">'+fm(p.salePrice)+'</div></div>'
+        +'<div class="prop-stat"><div class="ps-label">Net cash</div><div class="ps-val" style="color:var(--blue)">'+fm(dsum.netProceeds)+'</div></div>'
+        +'<div class="prop-stat"><div class="ps-label">Est. gain</div><div class="ps-val" style="color:'+(dsum.gain>=0?'var(--green)':'var(--red)')+'">'+fm(dsum.gain)+'</div></div>'
+        +'</div>'
+      :'<div class="prop-stats">'
       +'<div class="prop-stat"><div class="ps-label">Zestimate<span style="font-size:9px;margin-left:4px;color:var(--text3)">'+valueAge(p)+'</span></div><div class="ps-val">'+fm(p.value)+'</div></div>'
       +'<div class="prop-stat"><div class="ps-label">Equity</div><div class="ps-val" style="color:var(--green)">'+fm(equity)+'</div></div>'
       +(p.rent?'<div class="prop-stat"><div class="ps-label">Rent/mo</div><div class="ps-val">'+fm(p.rent)+'</div></div>':'')
       +'<div class="prop-stat"><div class="ps-label">Expenses YTD</div><div class="ps-val" style="color:var(--red)">'+fm(exp)+'</div></div>'
-      +'</div>'
+      +'</div>')
       +(tenant?'<div style="margin-top:10px;font-size:12px;color:var(--text2)">Tenant: <span style="color:var(--text)">'+tenant.name+'</span> &middot; Lease ends '+fd(tenant.leaseEnd)+'</div>':'')
       +(p.drive?'<a href="'+p.drive+'" target="_blank" onclick="event.stopPropagation()" class="btn sm" style="color:var(--accent);text-decoration:none">&#9783; Drive</a>':'')
       +'<button class="btn sm" onclick="openEditProp('+i+')">Edit details</button>'
@@ -1648,13 +1709,13 @@ function renderProps(){
 
 // NET WORTH
 function renderNW(){
-  var tv=S.properties.reduce(function(a,p){return a+p.value;},0);
-  var td=S.loans.reduce(function(a,l){return a+l.balance;},0);
+  var tv=activeProps().reduce(function(a,p){return a+p.value;},0);
+  var td=S.loans.filter(function(l){return !isSold(S.properties[l.propIdx]);}).reduce(function(a,l){return a+l.balance;},0);
   var te=tv-td;
-  var tp=S.properties.reduce(function(a,p){return a+p.purchase;},0);
+  var tp=activeProps().reduce(function(a,p){return a+p.purchase;},0);
   var app=tv-tp;
   document.getElementById('nw-stats').innerHTML=
-    '<div class="stat-card"><div class="s-label">Portfolio value</div><div class="s-val blue">'+fm(tv)+'</div><div class="s-sub">'+S.properties.length+' properties</div></div>'
+    '<div class="stat-card"><div class="s-label">Portfolio value</div><div class="s-val blue">'+fm(tv)+'</div><div class="s-sub">'+activeProps().length+' properties</div></div>'
     +'<div class="stat-card"><div class="s-label">Total debt</div><div class="s-val red">'+fm(td)+'</div></div>'
     +'<div class="stat-card"><div class="s-label">Net equity</div><div class="s-val green">'+fm(te)+'</div><div class="s-sub">'+(tv?Math.round(te/tv*100):0)+'% equity</div></div>'
     +'<div class="stat-card"><div class="s-label">Appreciation</div><div class="s-val '+(app>=0?'green':'red')+'">'+fm(app)+'</div><div class="s-sub">vs. purchase price</div></div>';
@@ -1832,7 +1893,7 @@ function importCSV(event){
 
 // CASHFLOW
 function renderCF(){
-  var rentals=S.properties.map(function(p,i){return Object.assign({},p,{_i:i});}).filter(function(p){return p.type==='Rental';});
+  var rentals=S.properties.map(function(p,i){return Object.assign({},p,{_i:i});}).filter(function(p){return p.type==='Rental'&&!isSold(p);});
   var tr=rentals.reduce(function(a,p){return a+p.rent;},0);
   var tds=S.loans.filter(function(l){return rentals.some(function(p){return p._i==l.propIdx;});}).reduce(function(a,l){return a+l.payment;},0);
   var tex=S.expenses.filter(function(e){return rentals.some(function(p){return p._i==e.propIdx;});}).reduce(function(a,e){return a+e.amount;},0);
@@ -2051,15 +2112,17 @@ function renderRem(){
 }
 
 // DASHBOARD
+function isSold(p){return (p&&p.status)==='sold';}
+function activeProps(){return S.properties.filter(function(p){return !isSold(p);});}
 function renderDash(){
-  var tv=S.properties.reduce(function(a,p){return a+p.value;},0);
-  var td=S.loans.reduce(function(a,l){return a+l.balance;},0);
-  var mr=S.properties.filter(function(p){return p.type==='Rental';}).reduce(function(a,p){return a+p.rent;},0);
+  var tv=activeProps().reduce(function(a,p){return a+p.value;},0);
+  var td=S.loans.filter(function(l){return !isSold(S.properties[l.propIdx]);}).reduce(function(a,l){return a+l.balance;},0);
+  var mr=activeProps().filter(function(p){return p.type==='Rental';}).reduce(function(a,p){return a+p.rent;},0);
   var tex=S.expenses.reduce(function(a,e){return a+e.amount;},0);
   var totalInc=(S.income||[]).filter(function(e){return e.date&&e.date.startsWith(String(new Date().getFullYear()));}).reduce(function(a,e){return a+e.amount;},0);
   var ded=S.expenses.filter(function(e){return e.deductible==='yes';}).reduce(function(a,e){return a+e.amount;},0);
   document.getElementById('dash-stats').innerHTML=
-    '<div class="stat-card"><div class="s-label">Portfolio value</div><div class="s-val blue">'+fm(tv)+'</div><div class="s-sub">'+S.properties.length+' properties</div></div>'
+    '<div class="stat-card"><div class="s-label">Portfolio value</div><div class="s-val blue">'+fm(tv)+'</div><div class="s-sub">'+activeProps().length+' properties</div></div>'
     +'<div class="stat-card"><div class="s-label">Net equity</div><div class="s-val green">'+fm(tv-td)+'</div><div class="s-sub">'+(tv?Math.round((tv-td)/tv*100):0)+'%</div></div>'
     +'<div class="stat-card"><div class="s-label">Monthly rent</div><div class="s-val">'+fm(mr)+'</div><div class="s-sub">'+S.properties.filter(function(p){return p.type==='Rental';}).length+' rentals</div></div>'
     +'<div class="stat-card"><div class="s-label">Expenses YTD</div><div class="s-val red">'+fm(tex)+'</div></div>'
@@ -2106,6 +2169,12 @@ function exportCSV(type){
   }else if(type==='rent'){
     header='Month,Tenant,Property,Expected,Received,Status,Notes\n';
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
+  }else if(type==='disposition'){
+    header='Property,LLC,Purchase Date,Purchase Price,Capital Improvements,Original Basis,Accumulated Depreciation,Adjusted Basis,Closing Date,Gross Sale Price,Selling Costs,Amount Realized,Estimated Gain,Mortgage Payoff,Net Cash Proceeds,Notes\n';
+    rows=S.properties.map(function(p,i){return {p:p,i:i};}).filter(function(x){return (x.p.status)==='sold';}).map(function(x){
+      var d=dispositionSummary(x.i);
+      return ['"'+(x.p.address||'')+'"','"'+(x.p.llc||'')+'"',(x.p.purchaseDate||''),d.purchase,d.improvements,d.origBasis,d.depr,d.adjBasis,(x.p.saleDate||''),d.salePrice,d.saleCosts,d.amountRealized,d.gain,d.payoff,d.netProceeds,'"'+(x.p.saleNotes||'').replace(/"/g,'')+'"'].join(',');
+    }).join('\n');
   }else if(type==='assets'){
     header='Property,LLC,Asset,Category,Location,Brand,Model,Serial,Purchase Date,Cost,Purchased From,Paid With,Mfr Warranty Expires,Extended Warranty,Ext Provider,Ext Expires,Ext Cost,Tax Treatment,Recovery Period (yrs),Status,Disposal Date,Disposal Amount,Est Book Value,Notes\n';
     rows=(S.assets||[]).map(function(a){
@@ -2395,6 +2464,91 @@ function renderCards(){
       +'<td><button class="btn icon-btn danger" onclick="delCardPayment('+p._i+')">x</button></td>'
       +'</tr>';
   }).join('');
+}
+
+// PROPERTY DISPOSITION
+// Capital improvements already logged against this property become part of basis.
+function capImprovements(propIdx){
+  return S.expenses.filter(function(e){
+    return e.propIdx===propIdx && e.category==='Capital improvement';
+  }).reduce(function(s,e){return s+(e.amount||0);},0);
+}
+
+function dispositionSummary(i){
+  var p=S.properties[i];
+  if(!p)return null;
+  var improvements=capImprovements(i);
+  var origBasis=(p.purchase||0)+improvements;
+  var adjBasis=origBasis-(p.saleDepr||0);
+  var amountRealized=(p.salePrice||0)-(p.saleCosts||0);
+  var gain=amountRealized-adjBasis;
+  var netProceeds=(p.salePrice||0)-(p.saleCosts||0)-(p.salePayoff||0);
+  return {
+    purchase:p.purchase||0, improvements:improvements, origBasis:origBasis,
+    depr:p.saleDepr||0, adjBasis:adjBasis,
+    salePrice:p.salePrice||0, saleCosts:p.saleCosts||0,
+    amountRealized:amountRealized, gain:gain,
+    payoff:p.salePayoff||0, netProceeds:netProceeds
+  };
+}
+
+function renderBasisReadout(i){
+  var el=document.getElementById('ep-basis-readout');
+  if(!el)return;
+  var d=dispositionSummary(i);
+  if(!d){el.innerHTML='';return;}
+  var line=function(label,val,opts){
+    opts=opts||{};
+    return '<div style="display:flex;justify-content:space-between'+(opts.rule?';border-top:1px solid var(--border);padding-top:4px;margin-top:4px':'')+'">'
+      +'<span'+(opts.bold?' style="color:var(--text)"':'')+'>'+label+'</span>'
+      +'<span style="color:'+(opts.color||'var(--text)')+'">'+val+'</span></div>';
+  };
+  el.innerHTML=
+    line('Purchase price',fm(d.purchase))
+   +line('+ Capital improvements logged',fm(d.improvements))
+   +line('= Original basis',fm(d.origBasis),{rule:true})
+   +line('− Accumulated depreciation',d.depr?fm(d.depr):'— enter above')
+   +line('= Adjusted basis',fm(d.adjBasis),{rule:true,bold:true})
+   +line('Sale price − selling costs',fm(d.amountRealized))
+   +line('= Estimated gain',fm(d.gain),{rule:true,bold:true,color:d.gain>=0?'var(--green)':'var(--red)'})
+   +'<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">'
+   +line('Net cash after payoff',fm(d.netProceeds),{bold:true,color:'var(--blue)'})
+   +'</div>'
+   +'<div style="margin-top:8px;color:var(--text3);font-size:11px;line-height:1.6">Estimate for planning. Your accountant computes actual gain, allocates between §1250 unrecaptured gain and capital gain, and reports on Form 4797.</div>';
+}
+
+// Fires once when a property is first marked sold.
+function onPropertySold(i){
+  var p=S.properties[i];
+  var d=p.saleDate||new Date().toISOString().slice(0,10);
+  var addDays=function(base,n){
+    var dt=new Date(base+'T00:00'); dt.setDate(dt.getDate()+n);
+    return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  };
+  var name=sh(p.address);
+  var items=[
+    ['Escrow refund received — '+name, addDays(d,30)],
+    ['Mortgage payoff overage refund — '+name, addDays(d,30)],
+    ['Insurance premium refund — '+name, addDays(d,45)],
+    ['Cancel landlord policy — '+name, addDays(d,7)],
+    ['Final utility bills closed out — '+name, addDays(d,45)],
+    ['Year-end mortgage statement (1098) — '+name, (parseInt(d.slice(0,4))+1)+'-01-31'],
+    ['Closing statement + basis records to accountant — '+name, addDays(d,14)]
+  ];
+  items.forEach(function(it){
+    S.reminders.push({propIdx:i,task:it[0],due:it[1],category:'Other',priority:'Medium',recurring:'',done:false});
+  });
+  // Mark assets at this property disposed as of closing
+  (S.assets||[]).forEach(function(a){
+    if(parseInt(a.propAddr)===i && (a.status||'active')==='active'){
+      a.status='disposed'; a.dispDate=d;
+      a.notes=(a.notes?a.notes+' — ':'')+'Conveyed with sale of property';
+    }
+  });
+  // Retire recurring templates for this property
+  (S.recurring||[]).forEach(function(r){
+    if(parseInt(r.propAddr)===i) r.retired=true;
+  });
 }
 
 // CAPITAL ASSETS
@@ -2737,7 +2891,7 @@ function alreadyInExpenses(r,y,m){
 
 function checkDueRecurring(){
   S.recurring=S.recurring||[];
-  var due=S.recurring.map(function(r,i){return Object.assign({},r,{_i:i});}).filter(isDue);
+  var due=S.recurring.map(function(r,i){return Object.assign({},r,{_i:i});}).filter(function(r){return !r.retired;}).filter(isDue);
   var banner=document.getElementById('rec-due-banner');
   if(!banner)return;
   var dashBanner=document.getElementById('dash-rec-banner');
