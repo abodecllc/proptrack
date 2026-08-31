@@ -190,7 +190,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="form-row">
             <div class="field"><label>Date</label><input type="date" id="e-date" style="width:138px"></div>
             <div class="field"><label>Property</label><select id="e-prop" style="width:160px"></select></div>
-            <div class="field"><label>Category</label><select id="e-cat" style="width:180px" onchange="toggleMortgageRow(this.value)"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select></div>
+            <div class="field"><label>Category</label><select id="e-cat" style="width:180px" onchange="toggleMortgageRow(this.value)"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Capital — equipment &amp; appliances (5-yr)</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select></div>
             <div class="field"><label>Description</label><input id="e-desc" placeholder="Brief note" style="width:150px"></div>
             <div class="field"><label>Amount ($)</label><input type="number" id="e-amt" placeholder="0.00" style="width:100px"></div>
             <div class="field"><label>Deductible</label><select id="e-ded" style="width:105px"><option value="yes">Yes</option><option value="no">No</option></select></div>
@@ -219,7 +219,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
             <select id="ef-ded" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All types</option><option value="yes">Deductible</option><option value="no">Non-ded.</option></select>
             <select id="ef-yr" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExpenses()"><option value="">All years</option></select>
             <select id="ef-sched" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All schedules</option><option value="E">Schedule E (rental)</option><option value="C">Schedule C (STR)</option></select>
-            <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select>
+            <select id="ef-cat" style="font-size:12px;padding:4px 8px;height:28px" onchange="renderExp()"><option value="">All categories</option><option value="__mortgage__">Mortgage (interest + principal)</option><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Capital — equipment &amp; appliances (5-yr)</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select>
           </div>
         </div>
         <table><thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Paid with</th><th>Type</th><th></th></tr></thead><tbody id="exp-table"></tbody></table>
@@ -897,6 +897,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
         </div>
       </div>
       <div class="field"><label>Purchase price ($)</label><input type="number" id="p-purch" placeholder="280000" style="width:140px"></div>
+      <div class="field"><label>Purchase date</label><input type="date" id="p-purchdate" style="width:150px"></div>
     </div>
     <div class="form-row">
       <div class="field"><label>LLC Name</label><input id="p-llc" placeholder="Main St Holdings LLC" style="width:200px"></div>
@@ -1301,7 +1302,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
       <div class="field"><label>Property</label><select id="ee-prop" style="width:180px"></select></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Category</label><select id="ee-cat" style="width:200px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select></div>
+      <div class="field"><label>Category</label><select id="ee-cat" style="width:200px"><option>Repairs &amp; maintenance</option><option>Property management</option><option>Insurance</option><option>Property tax</option><option>HOA fees</option><option>Utilities</option><option>Mortgage payment</option><option>Mortgage interest</option><option>Mortgage principal</option><option>Depreciation</option><option>Advertising</option><option>Professional fees</option><option>Capital improvement</option><option>Capital — equipment &amp; appliances (5-yr)</option><option>Other deductible</option><option>Non-deductible</option><option>STR — Platform fees (Airbnb/VRBO)</option><option>STR — Cleaning</option><option>STR — Supplies &amp; toiletries</option><option>STR — Linens &amp; furnishings</option><option>STR — Photography</option><option>STR — Other</option></select></div>
       <div class="field"><label>Deductible</label><select id="ee-ded" style="width:110px"><option value="yes">Yes</option><option value="no">No</option></select></div>
     </div>
     <div class="form-row">
@@ -1339,6 +1340,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
         </div>
       </div>
       <div class="field"><label>Purchase price ($)</label><input type="number" id="ep-purch" style="width:140px"></div>
+      <div class="field"><label>Purchase date</label><input type="date" id="ep-purchdate" style="width:150px"></div>
     </div>
     <div class="form-row">
       <div class="field"><label>LLC Name</label><input id="ep-llc" placeholder="Main St Holdings LLC" style="width:200px"></div>
@@ -1617,9 +1619,9 @@ function fillSelects(){
 // PROPERTIES
 function addProp(){
   var addr=document.getElementById('p-addr').value.trim();if(!addr)return;
-  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,llc:document.getElementById('p-llc').value.trim(),value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value,drive:document.getElementById('p-drive').value.trim(),strStart:document.getElementById('p-str-start').value,strEnd:document.getElementById('p-str-end').value});
+  var pval=parseFloat(document.getElementById('p-val').value)||0;S.properties.push({address:addr,type:document.getElementById('p-type').value,llc:document.getElementById('p-llc').value.trim(),value:pval,valueUpdated:pval?new Date().toISOString().slice(0,10):'',purchase:parseFloat(document.getElementById('p-purch').value)||0,purchaseDate:document.getElementById('p-purchdate').value,rent:parseFloat(document.getElementById('p-rent').value)||0,year:document.getElementById('p-yr').value,sqft:document.getElementById('p-sqft').value,notes:document.getElementById('p-notes').value,drive:document.getElementById('p-drive').value.trim(),strStart:document.getElementById('p-str-start').value,strEnd:document.getElementById('p-str-end').value});
   save();closeModal('add-prop');fillSelects();
-  ['p-addr','p-val','p-purch','p-llc','p-rent','p-yr','p-sqft','p-notes','p-drive','p-str-start','p-str-end'].forEach(function(id){document.getElementById(id).value='';});
+  ['p-addr','p-val','p-purch','p-purchdate','p-llc','p-rent','p-yr','p-sqft','p-notes','p-drive','p-str-start','p-str-end'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('p-str-dates').style.display='none';
   renderProps();
 }
@@ -1630,6 +1632,7 @@ function openEditProp(i){
   document.getElementById('ep-type').value=p.type||'Rental';
   document.getElementById('ep-val').value=p.value||'';
   document.getElementById('ep-purch').value=p.purchase||'';
+  document.getElementById('ep-purchdate').value=p.purchaseDate||'';
   document.getElementById('ep-rent').value=p.rent||'';
   document.getElementById('ep-yr').value=p.year||'';
   document.getElementById('ep-sqft').value=p.sqft||'';
@@ -1655,7 +1658,7 @@ function openEditProp(i){
 }
 function saveProp(){
   var i=parseInt(document.getElementById('ep-i').value);
-  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevStatus=S.properties[i].status||'active';var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim(),strStart:document.getElementById('ep-str-start').value,strEnd:document.getElementById('ep-str-end').value,taxSchedule:document.getElementById('ep-schedule').value,
+  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevStatus=S.properties[i].status||'active';var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,purchaseDate:document.getElementById('ep-purchdate').value,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim(),strStart:document.getElementById('ep-str-start').value,strEnd:document.getElementById('ep-str-end').value,taxSchedule:document.getElementById('ep-schedule').value,
     status:document.getElementById('ep-status').value,
     saleDate:document.getElementById('ep-sale-date').value,
     salePrice:parseFloat(document.getElementById('ep-sale-price').value)||0,
@@ -2179,10 +2182,10 @@ function exportCSV(type){
     header='Month,Tenant,Property,Expected,Received,Status,Notes\n';
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
   }else if(type==='disposition'){
-    header='Property,LLC,Purchase Date,Purchase Price,Capital Improvements,Original Basis,Accumulated Depreciation,Adjusted Basis,Closing Date,Gross Sale Price,Selling Costs,Amount Realized,Estimated Gain,Mortgage Payoff,Net Cash Proceeds,Notes\n';
+    header='Property,LLC,Purchase Date,Purchase Price,Capital Improvements (27.5-yr),5-yr Equipment (separate §1245),Original Basis,Accumulated Depreciation,Adjusted Basis,Closing Date,Gross Sale Price,Selling Costs,Amount Realized,Estimated Gain,Mortgage Payoff,Net Cash Proceeds,Notes\n';
     rows=S.properties.map(function(p,i){return {p:p,i:i};}).filter(function(x){return (x.p.status)==='sold';}).map(function(x){
       var d=dispositionSummary(x.i);
-      return ['"'+(x.p.address||'')+'"','"'+(x.p.llc||'')+'"',(x.p.purchaseDate||''),d.purchase,d.improvements,d.origBasis,d.depr,d.adjBasis,(x.p.saleDate||''),d.salePrice,d.saleCosts,d.amountRealized,d.gain,d.payoff,d.netProceeds,'"'+(x.p.saleNotes||'').replace(/"/g,'')+'"'].join(',');
+      return ['"'+(x.p.address||'')+'"','"'+(x.p.llc||'')+'"',(x.p.purchaseDate||''),d.purchase,d.improvements,d.personalProp,d.origBasis,d.depr,d.adjBasis,(x.p.saleDate||''),d.salePrice,d.saleCosts,d.amountRealized,d.gain,d.payoff,d.netProceeds,'"'+(x.p.saleNotes||'').replace(/"/g,'')+'"'].join(',');
     }).join('\n');
   }else if(type==='assets'){
     header='Property,LLC,Asset,Category,Location,Brand,Model,Serial,Purchase Date,Cost,Purchased From,Paid With,Mfr Warranty Expires,Extended Warranty,Ext Provider,Ext Expires,Ext Cost,Tax Treatment,Recovery Period (yrs),Status,Disposal Date,Disposal Amount,Est Book Value,Notes\n';
@@ -2477,9 +2480,16 @@ function renderCards(){
 
 // PROPERTY DISPOSITION
 // Capital improvements already logged against this property become part of basis.
+// Only real-property improvements add to the building's basis.
+// Appliances, carpet and furnishings are separate 5-yr §1245 property.
 function capImprovements(propIdx){
   return S.expenses.filter(function(e){
     return e.propIdx===propIdx && e.category==='Capital improvement';
+  }).reduce(function(s,e){return s+(e.amount||0);},0);
+}
+function personalPropertyCap(propIdx){
+  return S.expenses.filter(function(e){
+    return e.propIdx===propIdx && e.category==='Capital \u2014 equipment & appliances (5-yr)';
   }).reduce(function(s,e){return s+(e.amount||0);},0);
 }
 
@@ -2487,13 +2497,14 @@ function dispositionSummary(i){
   var p=S.properties[i];
   if(!p)return null;
   var improvements=capImprovements(i);
+  var personalProp=personalPropertyCap(i);
   var origBasis=(p.purchase||0)+improvements;
   var adjBasis=origBasis-(p.saleDepr||0);
   var amountRealized=(p.salePrice||0)-(p.saleCosts||0);
   var gain=amountRealized-adjBasis;
   var netProceeds=(p.salePrice||0)-(p.saleCosts||0)-(p.salePayoff||0);
   return {
-    purchase:p.purchase||0, improvements:improvements, origBasis:origBasis,
+    purchase:p.purchase||0, improvements:improvements, personalProp:personalProp, origBasis:origBasis,
     depr:p.saleDepr||0, adjBasis:adjBasis,
     salePrice:p.salePrice||0, saleCosts:p.saleCosts||0,
     amountRealized:amountRealized, gain:gain,
@@ -2515,9 +2526,22 @@ function renderBasisReadout(i){
   el.innerHTML=
     line('Purchase price',fm(d.purchase))
    +line('+ Capital improvements logged',fm(d.improvements))
+   +(function(){
+      var firstExp=S.expenses.filter(function(e){return e.propIdx===i&&e.date;})
+        .map(function(e){return e.date;}).sort()[0];
+      var pd=S.properties[i].purchaseDate;
+      var gap = pd && firstExp && firstExp.slice(0,4) > pd.slice(0,4);
+      if(!d.improvements || gap){
+        return '<div style="margin-top:6px;padding:8px 10px;background:var(--amber-bg);border-radius:4px;color:var(--amber);font-size:11px;line-height:1.6">'
+          + (d.improvements ? 'PropTrack only has records from ' + firstExp.slice(0,7) + '.' : 'No capital improvements logged in PropTrack.')
+          + ' Improvements made before you started tracking here will be on your accountant\u2019s depreciation schedule \u2014 request the fixed asset detail rather than relying on this figure.</div>';
+      }
+      return '';
+    })()
    +line('= Original basis',fm(d.origBasis),{rule:true})
    +line('− Accumulated depreciation',d.depr?fm(d.depr):'— enter above')
    +line('= Adjusted basis',fm(d.adjBasis),{rule:true,bold:true})
+   +(d.personalProp?'<div style="margin-top:8px;padding:8px 10px;background:var(--amber-bg);border-radius:4px;color:var(--amber);font-size:11px;line-height:1.6">Separately: '+fm(d.personalProp)+' of 5-yr equipment &amp; appliances is <strong>not</strong> in the basis above. \u00a71245 property is reported separately and recaptured at ordinary rates.</div>':'')
    +line('Sale price − selling costs',fm(d.amountRealized))
    +line('= Estimated gain',fm(d.gain),{rule:true,bold:true,color:d.gain>=0?'var(--green)':'var(--red)'})
    +'<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">'
@@ -2694,7 +2718,8 @@ function assetToExpense(i){
     if(pe&&a.propAddr!=='')pe.value=parseInt(a.propAddr);
     set('e-desc',(a.brand?a.brand+' ':'')+a.name+(a.from?' \u2014 '+a.from:''));
     set('e-amt',a.price||'');
-    set('e-cat',a.tax==='expensed'?'Repairs & maintenance':'Capital improvement');
+    set('e-cat', a.tax==='expensed' ? 'Repairs & maintenance'
+      : (parseFloat(a.recovery||0) >= 27.5 ? 'Capital improvement' : 'Capital \u2014 equipment & appliances (5-yr)'));
     set('e-ded','yes');
     var ea=document.getElementById('e-acct');if(ea&&a.acct)ea.value=a.acct;
     var amt=document.getElementById('e-amt');
