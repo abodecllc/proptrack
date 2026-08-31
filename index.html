@@ -1348,9 +1348,18 @@ tr:hover td{background:rgba(255,255,255,0.015)}
     </div>
     <div id="ep-str-dates" style="display:none;background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;border:1px solid var(--amber-bg)">
       <div style="font-size:11px;color:var(--amber);font-family:monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">&#9888; STR period — expenses within this window will be tagged Schedule C</div>
-      <div class="form-row" style="margin-bottom:0">
+      <div class="form-row" style="margin-bottom:8px">
         <div class="field"><label>STR start date</label><input type="date" id="ep-str-start" style="width:150px"></div>
         <div class="field"><label>STR end date</label><input type="date" id="ep-str-end" style="width:150px"></div>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="field"><label>Tax schedule</label>
+          <select id="ep-schedule" style="width:280px">
+            <option value="E">Schedule E — rental activity (default)</option>
+            <option value="C">Schedule C — business (avg. stay under 7 days)</option>
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--text3);align-self:flex-end;padding-bottom:8px;max-width:300px;line-height:1.5">Determined by average stay length and whether substantial personal services are provided — not by the platform used. Confirm with your accountant.</span>
       </div>
     </div>
     <div id="ep-sale-block" style="background:var(--bg3);border:1px solid rgba(212,168,75,0.3);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px">
@@ -1638,6 +1647,7 @@ function openEditProp(i){
   renderBasisReadout(i);
   document.getElementById('ep-str-start').value=p.strStart||'';
   document.getElementById('ep-str-end').value=p.strEnd||'';
+  document.getElementById('ep-schedule').value=p.taxSchedule||'E';
   document.getElementById('ep-str-dates').style.display=p.type==='Short-term rental (STR)'?'block':'none';
   var dl=document.getElementById('ep-drive-link');if(dl){dl.href=p.drive||'#';dl.style.opacity=p.drive?'1':'0.4';}
   var vn=document.getElementById('ep-val-note');if(vn)vn.textContent=p.valueUpdated?'Last updated: '+p.valueUpdated+' — click Z to refresh':p.value?'No update date recorded':'Enter value or click Z to pull from Zillow';
@@ -1645,7 +1655,7 @@ function openEditProp(i){
 }
 function saveProp(){
   var i=parseInt(document.getElementById('ep-i').value);
-  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevStatus=S.properties[i].status||'active';var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim(),strStart:document.getElementById('ep-str-start').value,strEnd:document.getElementById('ep-str-end').value,
+  var epval=parseFloat(document.getElementById('ep-val').value)||0;var prevVal=S.properties[i].value;var prevStatus=S.properties[i].status||'active';var prevUpd=S.properties[i].valueUpdated||'';S.properties[i]={address:document.getElementById('ep-addr').value,type:document.getElementById('ep-type').value,llc:document.getElementById('ep-llc').value.trim(),value:epval,valueUpdated:epval!==prevVal?new Date().toISOString().slice(0,10):prevUpd,purchase:parseFloat(document.getElementById('ep-purch').value)||0,rent:parseFloat(document.getElementById('ep-rent').value)||0,year:document.getElementById('ep-yr').value,sqft:document.getElementById('ep-sqft').value,notes:document.getElementById('ep-notes').value,drive:document.getElementById('ep-drive').value.trim(),strStart:document.getElementById('ep-str-start').value,strEnd:document.getElementById('ep-str-end').value,taxSchedule:document.getElementById('ep-schedule').value,
     status:document.getElementById('ep-status').value,
     saleDate:document.getElementById('ep-sale-date').value,
     salePrice:parseFloat(document.getElementById('ep-sale-price').value)||0,
@@ -1761,7 +1771,7 @@ function addExpense(){
     var mPaidWith=(document.getElementById('e-acct')&&document.getElementById('e-acct').value)||'';
     var mSched='E';
     var mProp=S.properties[pi];
-    if(mProp&&mProp.strStart&&mProp.strEnd&&d>=mProp.strStart&&d<=mProp.strEnd){mSched='C';}
+    if(mProp&&mProp.taxSchedule==='C'&&mProp.strStart&&mProp.strEnd&&d>=mProp.strStart&&d<=mProp.strEnd){mSched='C';}
     if(interest>0&&interest<a){
       var principal=Math.round((a-interest)*100)/100;
       S.expenses.push({propIdx:pi,date:d,category:'Mortgage interest',desc:desc||'Mortgage - interest portion',amount:Math.round(interest*100)/100,deductible:'yes',paidWith:mPaidWith,schedule:mSched});
@@ -1772,8 +1782,7 @@ function addExpense(){
   } else {
     var sched='E';
     var ep=S.properties[pi];
-    if(ep&&ep.strStart&&ep.strEnd&&d>=ep.strStart&&d<=ep.strEnd){sched='C';}
-    if(cat&&cat.startsWith('STR —')){sched='C';}
+    if(ep&&ep.taxSchedule==='C'&&ep.strStart&&ep.strEnd&&d>=ep.strStart&&d<=ep.strEnd){sched='C';}
     S.expenses.push({propIdx:pi,date:d,category:cat,desc:desc,amount:a,deductible:document.getElementById('e-ded').value,paidWith:(document.getElementById('e-acct')&&document.getElementById('e-acct').value)||'',schedule:sched});
   }
   save();renderExp();fillSelects();
@@ -2183,7 +2192,7 @@ function exportCSV(type){
     }).join('\n');
   }else if(type==='income'){
     header='Date,Property,Account,Category,Description,Amount\n';
-    rows=(S.income||[]).map(function(e){var p=S.properties[parseInt(e.propAddr)];var sched=e.category&&e.category.startsWith('STR —')?'C':'';return e.date+',"'+(p?p.address:'')+'","'+paidWithLabel(e.acct||'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+sched;}).join('\n');
+    rows=(S.income||[]).map(function(e){var p=S.properties[parseInt(e.propAddr)];var sched=(p&&p.taxSchedule==='C')?'C':'E';return e.date+',"'+(p?p.address:'')+'","'+paidWithLabel(e.acct||'')+'","'+e.category+'","'+(e.desc||'')+'",'+e.amount+','+sched;}).join('\n');
     header='Date,Property,Account,Category,Description,Amount,Schedule\n';
   }else if(type==='schedC'){
     header='Date,Property,LLC,Category,Description,Amount,Deductible,Schedule\n';
@@ -2922,7 +2931,7 @@ function confirmDueExpenses(){
     var amt=parseFloat(document.getElementById('due-amt-'+i).value)||r.amount;
     var p=S.properties[parseInt(r.propAddr)];
     var sched='E';
-    if(p&&p.strStart&&p.strEnd&&todayStr>=p.strStart&&todayStr<=p.strEnd)sched='C';
+    if(p&&p.taxSchedule==='C'&&p.strStart&&p.strEnd&&todayStr>=p.strStart&&todayStr<=p.strEnd)sched='C';
     if(r.category==='Mortgage payment'){
       // Auto-split into interest + principal using loan interestPct
       var loan2=S.loans.find(function(l){return l.propIdx==parseInt(r.propAddr);});
