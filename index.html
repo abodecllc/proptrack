@@ -1382,7 +1382,13 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="field"><label>Mortgage payoff ($)</label><input type="number" id="ep-sale-payoff" oninput="renderBasisReadout(parseInt(document.getElementById('ep-i').value))" placeholder="0.00" style="width:150px"></div>
         </div>
         <div class="form-row">
-          <div class="field"><label>Accumulated depreciation ($)</label><input type="number" id="ep-sale-depr" oninput="renderBasisReadout(parseInt(document.getElementById('ep-i').value))" placeholder="From accountant" style="width:190px" title="Your accountant provides this — needed for gain and recapture"></div>
+          <div class="field"><label>Improvement history</label>
+            <select id="ep-basis-verified" style="width:250px" onchange="renderBasisReadout(parseInt(document.getElementById('ep-i').value))">
+              <option value="">Unverified — may predate PropTrack</option>
+              <option value="1">Verified complete — no other improvements</option>
+            </select>
+          </div>
+        <div class="field"><label>Accumulated depreciation ($)</label><input type="number" id="ep-sale-depr" oninput="renderBasisReadout(parseInt(document.getElementById('ep-i').value))" placeholder="From accountant" style="width:190px" title="Your accountant provides this — needed for gain and recapture"></div>
           <div class="field" style="flex:1"><label>Closing notes</label><input id="ep-sale-notes" placeholder="Buyer, title company, 1031 QI if applicable" style="width:100%"></div>
         </div>
         <div id="ep-basis-readout" style="margin-top:8px;padding:10px 12px;background:var(--bg2);border-radius:6px;font-size:12px;font-family:monospace;color:var(--text2);line-height:1.9"></div>
@@ -1645,6 +1651,7 @@ function openEditProp(i){
   document.getElementById('ep-sale-costs').value=p.saleCosts||'';
   document.getElementById('ep-sale-payoff').value=p.salePayoff||'';
   document.getElementById('ep-sale-depr').value=p.saleDepr||'';
+  document.getElementById('ep-basis-verified').value=p.basisVerified?'1':'';
   document.getElementById('ep-sale-notes').value=p.saleNotes||'';
   document.getElementById('ep-sale-fields').style.display=(p.status==='sold')?'block':'none';
   renderBasisReadout(i);
@@ -1664,7 +1671,7 @@ function saveProp(){
     salePrice:parseFloat(document.getElementById('ep-sale-price').value)||0,
     saleCosts:parseFloat(document.getElementById('ep-sale-costs').value)||0,
     salePayoff:parseFloat(document.getElementById('ep-sale-payoff').value)||0,
-    saleDepr:parseFloat(document.getElementById('ep-sale-depr').value)||0,
+    saleDepr:parseFloat(document.getElementById('ep-sale-depr').value)||0,basisVerified:document.getElementById('ep-basis-verified').value==='1',
     saleNotes:document.getElementById('ep-sale-notes').value.trim()};
   if(S.properties[i].status==='sold'&&prevStatus!=='sold'){onPropertySold(i);}
   save();closeModal('edit-prop');renderProps();fillSelects();
@@ -2182,10 +2189,10 @@ function exportCSV(type){
     header='Month,Tenant,Property,Expected,Received,Status,Notes\n';
     rows=S.rentPayments.map(function(r){var t=S.tenants[r.tenantIdx];var p=t?S.properties[t.propIdx]:null;return r.month+',"'+(t?t.name:'')+'","'+(p?p.address:'')+'",'+r.expected+','+r.amount+','+r.status+',"'+(r.notes||'')+'"';}).join('\n');
   }else if(type==='disposition'){
-    header='Property,LLC,Purchase Date,Purchase Price,Capital Improvements (27.5-yr),5-yr Equipment (separate §1245),Original Basis,Accumulated Depreciation,Adjusted Basis,Closing Date,Gross Sale Price,Selling Costs,Amount Realized,Estimated Gain,Mortgage Payoff,Net Cash Proceeds,Notes\n';
+    header='Property,LLC,Purchase Date,Purchase Price,Improvement History Verified,Capital Improvements (27.5-yr),5-yr Equipment (separate §1245),Original Basis,Accumulated Depreciation,Adjusted Basis,Closing Date,Gross Sale Price,Selling Costs,Amount Realized,Estimated Gain,Mortgage Payoff,Net Cash Proceeds,Notes\n';
     rows=S.properties.map(function(p,i){return {p:p,i:i};}).filter(function(x){return (x.p.status)==='sold';}).map(function(x){
       var d=dispositionSummary(x.i);
-      return ['"'+(x.p.address||'')+'"','"'+(x.p.llc||'')+'"',(x.p.purchaseDate||''),d.purchase,d.improvements,d.personalProp,d.origBasis,d.depr,d.adjBasis,(x.p.saleDate||''),d.salePrice,d.saleCosts,d.amountRealized,d.gain,d.payoff,d.netProceeds,'"'+(x.p.saleNotes||'').replace(/"/g,'')+'"'].join(',');
+      return ['"'+(x.p.address||'')+'"','"'+(x.p.llc||'')+'"',(x.p.purchaseDate||''),d.purchase,(x.p.basisVerified?'Yes':'No'),d.improvements,d.personalProp,d.origBasis,d.depr,d.adjBasis,(x.p.saleDate||''),d.salePrice,d.saleCosts,d.amountRealized,d.gain,d.payoff,d.netProceeds,'"'+(x.p.saleNotes||'').replace(/"/g,'')+'"'].join(',');
     }).join('\n');
   }else if(type==='assets'){
     header='Property,LLC,Asset,Category,Location,Brand,Model,Serial,Purchase Date,Cost,Purchased From,Paid With,Mfr Warranty Expires,Extended Warranty,Ext Provider,Ext Expires,Ext Cost,Tax Treatment,Recovery Period (yrs),Status,Disposal Date,Disposal Amount,Est Book Value,Notes\n';
@@ -2531,6 +2538,9 @@ function renderBasisReadout(i){
         .map(function(e){return e.date;}).sort()[0];
       var pd=S.properties[i].purchaseDate;
       var gap = pd && firstExp && firstExp.slice(0,4) > pd.slice(0,4);
+      if(S.properties[i].basisVerified){
+        return '<div style="margin-top:6px;padding:8px 10px;background:var(--green-bg);border-radius:4px;color:var(--green);font-size:11px;line-height:1.6">Improvement history confirmed complete.</div>';
+      }
       if(!d.improvements || gap){
         return '<div style="margin-top:6px;padding:8px 10px;background:var(--amber-bg);border-radius:4px;color:var(--amber);font-size:11px;line-height:1.6">'
           + (d.improvements ? 'PropTrack only has records from ' + firstExp.slice(0,7) + '.' : 'No capital improvements logged in PropTrack.')
