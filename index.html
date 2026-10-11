@@ -1167,6 +1167,42 @@ tr:hover td{background:rgba(255,255,255,0.015)}
   </div>
 </div>
 
+<!-- EDIT REMINDER MODAL -->
+<div class="modal-bg" id="modal-edit-rem">
+  <div class="modal">
+    <h3>Edit reminder</h3>
+    <input type="hidden" id="erm-i">
+    <div class="form-row">
+      <div class="field" style="flex:1"><label>Task</label><input id="erm-task" style="width:100%"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Applies to</label><select id="erm-prop" style="width:200px"></select></div>
+      <div class="field"><label>Due date</label><input type="date" id="erm-due" style="width:145px"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Category</label>
+        <select id="erm-cat" style="width:150px">
+          <option>Maintenance</option><option>Payment</option><option>Insurance</option>
+          <option>Tax</option><option>Inspection</option><option>Lease renewal</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Priority</label><select id="erm-pri" style="width:105px"><option>High</option><option>Medium</option><option>Low</option></select></div>
+      <div class="field"><label>Recurring</label>
+        <select id="erm-rec" style="width:125px">
+          <option value="">One-time</option><option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option><option value="annual">Annual</option>
+        </select>
+      </div>
+      <div class="field"><label>Status</label><select id="erm-done" style="width:120px"><option value="">Open</option><option value="1">Done</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn danger" onclick="delRemFromModal()" style="margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('edit-rem')">Cancel</button>
+      <button class="btn primary" onclick="saveEditRem()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT RECURRING MODAL -->
 <div class="modal-bg" id="modal-edit-rec">
   <div class="modal">
@@ -2106,6 +2142,54 @@ function addReminder(){
   save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();
   ['r-task','r-due'].forEach(function(id){document.getElementById(id).value='';});
 }
+function openEditRem(i){
+  var r=S.reminders[i];if(!r)return;
+  document.getElementById('erm-i').value=i;
+  document.getElementById('erm-task').value=r.task||'';
+  document.getElementById('erm-due').value=r.due||'';
+  document.getElementById('erm-cat').value=r.category||'Maintenance';
+  document.getElementById('erm-pri').value=r.priority||'Medium';
+  document.getElementById('erm-rec').value=r.recurring||'';
+  document.getElementById('erm-done').value=r.done?'1':'';
+  // Build the 'applies to' list: properties plus a non-property option,
+  // so credit-card and other general reminders keep their association.
+  var sel=document.getElementById('erm-prop');
+  if(sel){
+    sel.innerHTML='<option value="card">Personal / not property-specific</option>';
+    S.properties.forEach(function(p,pi){
+      var o=document.createElement('option');
+      o.value=pi;
+      o.textContent=sh(p.address)+(isSold(p)?' (sold)':'');
+      sel.appendChild(o);
+    });
+    sel.value=(r.propIdx==='card')?'card':String(r.propIdx);
+  }
+  openModal('edit-rem');
+}
+function saveEditRem(){
+  var i=parseInt(document.getElementById('erm-i').value);
+  if(isNaN(i)||!S.reminders[i])return;
+  var task=document.getElementById('erm-task').value.trim();
+  var due=document.getElementById('erm-due').value;
+  if(!task||!due){alert('Task and due date are both required.');return;}
+  var pv=document.getElementById('erm-prop').value;
+  S.reminders[i].task=task;
+  S.reminders[i].due=due;
+  S.reminders[i].propIdx=(pv==='card')?'card':parseInt(pv);
+  if(pv==='card'&&!S.reminders[i].cardOwner)S.reminders[i].cardOwner='personal';
+  S.reminders[i].category=document.getElementById('erm-cat').value;
+  S.reminders[i].priority=document.getElementById('erm-pri').value;
+  S.reminders[i].recurring=document.getElementById('erm-rec').value;
+  S.reminders[i].done=document.getElementById('erm-done').value==='1';
+  save();closeModal('edit-rem');renderRem();
+  var g=loadCfg();if(g.token&&g.id)syncNow();
+}
+function delRemFromModal(){
+  var i=parseInt(document.getElementById('erm-i').value);
+  if(!confirm('Delete this reminder?'))return;
+  S.reminders.splice(i,1);save();closeModal('edit-rem');renderRem();
+  var g=loadCfg();if(g.token&&g.id)syncNow();
+}
 function togRem(i){S.reminders[i].done=!S.reminders[i].done;save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();}
 function delRem(i){S.reminders.splice(i,1);save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();}
 function renderRem(){
@@ -2125,6 +2209,7 @@ function renderRem(){
       +'</div>'
       +'<span class="badge '+ug+'" style="min-width:84px;text-align:center">'+lbl+'</span>'
       +'<button class="btn sm '+(r.done?'':'success')+'" onclick="togRem('+r._i+')">'+(r.done?'Undo':'Done')+'</button>'
+      +'<button class="btn icon-btn" onclick="openEditRem('+r._i+')">&#9998;</button>'
       +'<button class="btn sm danger" onclick="delRem('+r._i+')">x</button>'
       +'</div></div>';
   }).join('');
