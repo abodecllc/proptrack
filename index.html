@@ -303,7 +303,16 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="field"><label>Due date</label><input type="date" id="r-due" style="width:138px"></div>
           <div class="field"><label>Category</label><select id="r-cat" style="width:148px"><option>Maintenance</option><option>Payment</option><option>Insurance</option><option>Tax</option><option>Inspection</option><option>Lease renewal</option><option>Other</option></select></div>
           <div class="field"><label>Priority</label><select id="r-pri" style="width:98px"><option>High</option><option>Medium</option><option>Low</option></select></div>
-          <div class="field"><label>Recurring</label><select id="r-rec" style="width:115px"><option value="">One-time</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="annual">Annual</option></select></div>
+          <div class="field"><label>Repeat</label>
+            <select id="r-rec" style="width:130px" onchange="document.getElementById('r-rec-every').style.display=this.value?'block':'none'">
+              <option value="">One-time</option>
+              <option value="day">Every N days</option>
+              <option value="week">Every N weeks</option>
+              <option value="month">Every N months</option>
+              <option value="year">Every N years</option>
+            </select>
+          </div>
+          <div class="field"><label>N</label><input type="number" id="r-rec-every" min="1" max="99" value="1" style="width:62px;display:none" title="How many days/weeks/months between occurrences"></div>
           <button class="btn primary" onclick="addReminder()">Add</button>
         </div>
       </div></div>
@@ -858,6 +867,9 @@ tr:hover td{background:rgba(255,255,255,0.015)}
         </div>
         <div class="form-row"><div class="field" style="flex:1"><label>GitHub personal access token</label><input id="cfg-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;font-family:'DM Mono',monospace"></div></div>
         <div class="form-row"><div class="field" style="flex:1"><label>Gist ID (auto-filled after first sync)</label><input id="cfg-gist" placeholder="Leave blank to create new" style="width:100%;font-family:'DM Mono',monospace"></div></div>
+        <div style="background:var(--green-bg);border:1px solid rgba(76,175,125,0.3);border-radius:var(--radius);padding:10px 14px;margin:12px 0;font-size:12px;color:var(--green);line-height:1.6">
+          Auto-save is on. Once a token and Gist ID are set, every change pushes automatically a couple of seconds after you stop typing. Push is only needed to force an immediate save.
+        </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn primary" onclick="saveCfg()">Save settings</button>
           <button class="btn" onclick="syncNow()">&#8645; Push to Gist</button>
@@ -1187,11 +1199,16 @@ tr:hover td{background:rgba(255,255,255,0.015)}
         </select>
       </div>
       <div class="field"><label>Priority</label><select id="erm-pri" style="width:105px"><option>High</option><option>Medium</option><option>Low</option></select></div>
-      <div class="field"><label>Recurring</label>
-        <select id="erm-rec" style="width:125px">
-          <option value="">One-time</option><option value="monthly">Monthly</option>
-          <option value="quarterly">Quarterly</option><option value="annual">Annual</option>
+      <div class="field"><label>Repeat</label>
+        <select id="erm-rec" style="width:140px" onchange="document.getElementById('erm-rec-every').style.display=this.value?'block':'none'">
+          <option value="">One-time</option>
+          <option value="day">Every N days</option>
+          <option value="week">Every N weeks</option>
+          <option value="month">Every N months</option>
+          <option value="year">Every N years</option>
         </select>
+      </div>
+      <div class="field"><label>N</label><input type="number" id="erm-rec-every" min="1" max="99" value="1" style="width:62px">
       </div>
       <div class="field"><label>Status</label><select id="erm-done" style="width:120px"><option value="">Open</option><option value="1">Done</option></select></div>
     </div>
@@ -1443,19 +1460,50 @@ tr:hover td{background:rgba(255,255,255,0.015)}
 <script>
 var S={properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],income:[],recurring:[],assets:[],cards:[],cardPayments:[],tenants:[],rentPayments:[],reminders:[]};
 try{var d=localStorage.getItem('proptrack_v2');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
+// ── Auto-sync ────────────────────────────────────────────────────────────
+// Every mutation funnels through save(), so the debounce lives here rather
+// than at each call site. Anything added later is covered for free.
+var _syncTimer=null, _syncSuppress=false, _syncRetry=0, _syncBusy=false, _dirty=false;
+var SYNC_DELAY=2500, RETRY_STEPS=[15000,45000,120000];
+
 function save(){
   try{
     localStorage.setItem('proptrack_v2',JSON.stringify(S));
     markDirty();
+    scheduleSync();
   }catch(e){}
 }
+
+function scheduleSync(delay){
+  if(_syncSuppress)return;
+  var g=loadCfg();
+  if(!g.token||!g.id)return;            // not configured — manual Push only
+  if(_syncTimer)clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(function(){
+    _syncTimer=null;
+    syncNow({auto:true});
+  }, delay==null?SYNC_DELAY:delay);
+}
+
+// Cancel any pending debounce and push immediately.
+function flushSync(){
+  if(_syncTimer){clearTimeout(_syncTimer);_syncTimer=null;}
+  return syncNow({auto:true});
+}
+
+function setSyncLabel(text,cls){
+  var lbl=document.getElementById('sync-label');if(lbl)lbl.textContent=text;
+  var dot=document.getElementById('sync-dot');if(dot)dot.className='sync-dot'+(cls?' '+cls:'');
+}
 function markDirty(){
+  _dirty=true;
   var dot=document.getElementById('unsaved-dot');
   if(dot)dot.style.display='inline-block';
   var btn=document.querySelector('button[onclick="syncNow()"]');
   if(btn){btn.style.borderColor='var(--amber)';btn.style.color='var(--amber)';}
 }
 function markClean(){
+  _dirty=false;
   var dot=document.getElementById('unsaved-dot');
   if(dot)dot.style.display='none';
   var btn=document.querySelector('button[onclick="syncNow()"]');
@@ -2138,10 +2186,76 @@ function addReminder(){
   var task=document.getElementById('r-task').value.trim();
   var due2=document.getElementById('r-due').value;
   if(!task||!due2||isNaN(pi))return;
-  S.reminders.push({propIdx:pi,task:task,due:due2,category:document.getElementById('r-cat').value,priority:document.getElementById('r-pri').value,recurring:document.getElementById('r-rec').value,done:false});
-  save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();
+  var ru=document.getElementById('r-rec').value;
+  var rn=parseInt(document.getElementById('r-rec-every').value)||1;
+  S.reminders.push({propIdx:pi,task:task,due:due2,
+    category:document.getElementById('r-cat').value,
+    priority:document.getElementById('r-pri').value,
+    recurUnit:ru||'', recurEvery:ru?rn:0, done:false});
+  save();renderRem();
   ['r-task','r-due'].forEach(function(id){document.getElementById(id).value='';});
 }
+// ── Reminder recurrence ──────────────────────────────────────────────────
+// Stored as recurEvery (number) + recurUnit ('day'|'week'|'month'|'year').
+// Legacy reminders used recurring:'monthly'|'quarterly'|'annual' — migrated
+// on load by migrateRecurrence().
+function ymd(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function addInterval(dateStr,every,unit){
+  var p=dateStr.split('-');
+  var y=parseInt(p[0]), m=parseInt(p[1])-1, day=parseInt(p[2]);
+  every=parseInt(every)||1;
+  if(unit==='day')  return ymd(new Date(y,m,day+every));
+  if(unit==='week') return ymd(new Date(y,m,day+every*7));
+  if(unit==='month'||unit==='year'){
+    var addMonths=(unit==='year')?every*12:every;
+    var ty=y, tm=m+addMonths;
+    ty+=Math.floor(tm/12); tm=((tm%12)+12)%12;
+    // Clamp to the last valid day (Jan 31 + 1 month → Feb 28/29)
+    var maxDay=new Date(ty,tm+1,0).getDate();
+    return ymd(new Date(ty,tm,Math.min(day,maxDay)));
+  }
+  return dateStr;
+}
+function hasRecurrence(r){
+  return !!(r && r.recurUnit && (parseInt(r.recurEvery)||0) > 0);
+}
+// Advance from the scheduled due date (not today) so a billing cadence stays
+// anchored; roll forward past today if several cycles were missed.
+function nextOccurrence(r){
+  if(!hasRecurrence(r))return null;
+  var today=ymd(new Date());
+  var next=addInterval(r.due,r.recurEvery,r.recurUnit);
+  var guard=0;
+  while(next<=today && guard++<600){
+    next=addInterval(next,r.recurEvery,r.recurUnit);
+  }
+  return next;
+}
+function recurLabel(r){
+  if(!hasRecurrence(r))return '';
+  var n=parseInt(r.recurEvery)||1, u=r.recurUnit;
+  if(n===1){
+    return {day:'Daily',week:'Weekly',month:'Monthly',year:'Annually'}[u]||'';
+  }
+  if(u==='month'&&n===3)return 'Quarterly';
+  if(u==='month'&&n===6)return 'Twice a year';
+  if(u==='week'&&n===2)return 'Biweekly';
+  return 'Every '+n+' '+u+'s';
+}
+// One-time migration of legacy string values.
+function migrateRecurrence(){
+  var map={monthly:[1,'month'],quarterly:[3,'month'],annual:[1,'year'],yearly:[1,'year']};
+  var changed=false;
+  (S.reminders||[]).forEach(function(r){
+    if(r.recurUnit)return;                      // already migrated
+    var legacy=map[r.recurring];
+    if(legacy){ r.recurEvery=legacy[0]; r.recurUnit=legacy[1]; changed=true; }
+  });
+  return changed;
+}
+
 function openEditRem(i){
   var r=S.reminders[i];if(!r)return;
   document.getElementById('erm-i').value=i;
@@ -2149,7 +2263,9 @@ function openEditRem(i){
   document.getElementById('erm-due').value=r.due||'';
   document.getElementById('erm-cat').value=r.category||'Maintenance';
   document.getElementById('erm-pri').value=r.priority||'Medium';
-  document.getElementById('erm-rec').value=r.recurring||'';
+  document.getElementById('erm-rec').value=r.recurUnit||'';
+  document.getElementById('erm-rec-every').value=parseInt(r.recurEvery)||1;
+  document.getElementById('erm-rec-every').style.display=r.recurUnit?'block':'none';
   document.getElementById('erm-done').value=r.done?'1':'';
   // Build the 'applies to' list: properties plus a non-property option,
   // so credit-card and other general reminders keep their association.
@@ -2179,19 +2295,47 @@ function saveEditRem(){
   if(pv==='card'&&!S.reminders[i].cardOwner)S.reminders[i].cardOwner='personal';
   S.reminders[i].category=document.getElementById('erm-cat').value;
   S.reminders[i].priority=document.getElementById('erm-pri').value;
-  S.reminders[i].recurring=document.getElementById('erm-rec').value;
+  var eru=document.getElementById('erm-rec').value;
+  S.reminders[i].recurUnit=eru||'';
+  S.reminders[i].recurEvery=eru?(parseInt(document.getElementById('erm-rec-every').value)||1):0;
   S.reminders[i].done=document.getElementById('erm-done').value==='1';
   save();closeModal('edit-rem');renderRem();
-  var g=loadCfg();if(g.token&&g.id)syncNow();
 }
 function delRemFromModal(){
   var i=parseInt(document.getElementById('erm-i').value);
   if(!confirm('Delete this reminder?'))return;
   S.reminders.splice(i,1);save();closeModal('edit-rem');renderRem();
-  var g=loadCfg();if(g.token&&g.id)syncNow();
 }
-function togRem(i){S.reminders[i].done=!S.reminders[i].done;save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();}
-function delRem(i){S.reminders.splice(i,1);save();renderRem();var g=loadCfg();if(g.token&&g.id)syncNow();}
+function togRem(i){
+  var r=S.reminders[i];
+  if(!r)return;
+  if(!r.done && hasRecurrence(r)){
+    // Completing a recurring reminder rolls it to the next occurrence
+    // rather than leaving a done row behind.
+    var next=nextOccurrence(r);
+    r.lastCompleted=ymd(new Date());
+    r.due=next;
+    r.done=false;
+    save();renderRem();
+    toastRem('Logged \u2014 next due '+fd(next));
+    return;
+  }
+  r.done=!r.done;
+  save();renderRem();
+}
+// Brief inline confirmation, since a rescheduled reminder otherwise looks
+// like nothing happened.
+function toastRem(msg){
+  var host=document.getElementById('reminder-list');
+  if(!host)return;
+  var t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='background:var(--green-bg);border:1px solid rgba(76,175,125,0.35);color:var(--green);'
+    +'border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:13px';
+  host.insertBefore(t,host.firstChild);
+  setTimeout(function(){ if(t.parentNode)t.parentNode.removeChild(t); },3200);
+}
+function delRem(i){S.reminders.splice(i,1);save();renderRem();}
 function renderRem(){
   var el=document.getElementById('reminder-list');
   if(!S.reminders.length){el.innerHTML='<div class="empty">No reminders yet.</div>';return;}
@@ -2205,7 +2349,7 @@ function renderRem(){
       +'<div class="r-dot" style="background:var(--'+ug+');margin-top:0"></div>'
       +'<div style="flex:1">'
       +'<div style="font-weight:500;'+(r.done?'text-decoration:line-through;color:var(--text3);':'')+'">'+r.task+'</div>'
-      +'<div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-top:2px">'+(r.propIdx==='card'?(r.cardOwner==='personal'?'Personal':r.cardOwner):p?sh(p.address):'?')+' &middot; '+r.category+' &middot; '+fd(r.due)+(r.recurring?' &middot; '+r.recurring:'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-top:2px">'+(r.propIdx==='card'?(r.cardOwner==='personal'?'Personal':r.cardOwner):p?sh(p.address):'?')+' &middot; '+r.category+' &middot; '+fd(r.due)+(recurLabel(r)?' &middot; '+recurLabel(r):'')+(r.lastCompleted?' &middot; last done '+fd(r.lastCompleted):'')+'</div>'
       +'</div>'
       +'<span class="badge '+ug+'" style="min-width:84px;text-align:center">'+lbl+'</span>'
       +'<button class="btn sm '+(r.done?'':'success')+'" onclick="togRem('+r._i+')">'+(r.done?'Undo':'Done')+'</button>'
@@ -2309,7 +2453,7 @@ function exportBackup(){
 function restoreBackup(event){
   var file=event.target.files[0];if(!file)return;
   var reader=new FileReader();
-  reader.onload=function(e){try{S=Object.assign(S,JSON.parse(e.target.result));save();alert('Backup restored!');location.reload();}catch(err){alert('Invalid backup file.');}};
+  reader.onload=function(e){try{S=Object.assign(S,JSON.parse(e.target.result));save();flushSync().then(function(){alert('Backup restored.');location.reload();}).catch(function(){alert('Backup restored locally, but the push to Gist failed. Use Push once you are back online.');location.reload();});}catch(err){alert('Invalid backup file.');}};
   reader.readAsText(file);
 }
 function clearAll(){if(!confirm('Delete ALL data? Download a backup first!'))return;localStorage.removeItem('proptrack_v2');location.reload();}
@@ -2324,16 +2468,21 @@ function saveCfg(){
   updateSync();
 }
 function clearCfg(){localStorage.removeItem('pt_tok');localStorage.removeItem('pt_gid');document.getElementById('cfg-token').value='';document.getElementById('cfg-gist').value='';var m=document.getElementById('cfg-msg');if(m)m.textContent='Credentials cleared.';updateSync();}
-async function syncNow(){
+async function syncNow(opts){
+  opts=opts||{};
+  var auto=opts.auto===true;
   var g=loadCfg();
-  if(!g.token){var lbl=document.getElementById('sync-label');if(lbl)lbl.textContent='No token — see Settings';return;}
-  // Safety check — warn if local data looks empty but Gist exists
+  if(!g.token){ if(!auto)setSyncLabel('No token — see Settings'); return; }
+  if(_syncBusy){ scheduleSync(1200); return; }   // a push is already in flight
+  // Never let an empty state overwrite a populated Gist.
   var localProps=(S.properties||[]).length;
   var localExp=(S.expenses||[]).length;
   if(g.id&&localProps===0&&localExp===0){
+    if(auto){ setSyncLabel('Not synced — local data empty','err'); return; }
     if(!confirm('WARNING: Your local data appears empty (0 properties, 0 expenses).\n\nSyncing now will overwrite the Gist with empty data.\n\nAre you sure you want to continue?'))return;
   }
-  var lbl=document.getElementById('sync-label');if(lbl)lbl.textContent='Syncing...';
+  _syncBusy=true;
+  setSyncLabel(auto?'Saving…':'Syncing…');
   try{
     var body={files:{'proptrack_data.json':{content:JSON.stringify(S)}}};
     var url='https://api.github.com/gists';var method='POST';
@@ -2343,16 +2492,24 @@ async function syncNow(){
     var data=await res.json();
     if(!g.id){localStorage.setItem('pt_gid',data.id);var gi=document.getElementById('cfg-gist');if(gi)gi.value=data.id;}
     var now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    var st=document.getElementById('sync-time');if(st)st.textContent='Pushed '+now;
-    document.getElementById('sync-dot').className='sync-dot ok';
-    if(lbl)lbl.textContent='Synced';
+    var st=document.getElementById('sync-time');if(st)st.textContent='Saved '+now;
+    setSyncLabel('Saved to Gist','ok');
     localStorage.setItem('pt_last_push', JSON.stringify(S));
+    _syncRetry=0;
     markClean();
-    var m=document.getElementById('cfg-msg');if(m){m.style.color='var(--green)';m.textContent='Push successful!';}
+    if(!auto){var m=document.getElementById('cfg-msg');if(m){m.style.color='var(--green)';m.textContent='Push successful!';}}
   }catch(e){
-    document.getElementById('sync-dot').className='sync-dot err';
-    if(lbl)lbl.textContent='Sync failed';
-    var m=document.getElementById('cfg-msg');if(m){m.style.color='var(--red)';m.textContent='Failed: '+e.message+' — check your token in Settings.';}
+    if(auto&&_syncRetry<RETRY_STEPS.length){
+      var wait=RETRY_STEPS[_syncRetry++];
+      setSyncLabel('Offline — retrying in '+Math.round(wait/1000)+'s','err');
+      _syncBusy=false;
+      scheduleSync(wait);
+      return;
+    }
+    setSyncLabel(auto?'Not saved — tap Push':'Sync failed','err');
+    if(!auto){var m2=document.getElementById('cfg-msg');if(m2){m2.style.color='var(--red)';m2.textContent='Failed: '+e.message+' — check your token in Settings.';}}
+  }finally{
+    _syncBusy=false;
   }
 }
 async function pullFromGist(){
@@ -2374,6 +2531,7 @@ async function pullFromGist(){
       return;
     }
     var parsed=JSON.parse(content);
+    _syncSuppress=true;   // don't bounce what we just pulled straight back
     var gistProps=(parsed.properties||[]).length;
     var gistExp=(parsed.expenses||[]).length;
     var localProps=(S.properties||[]).length;
@@ -2385,15 +2543,17 @@ async function pullFromGist(){
       +'Pulling will REPLACE your local data with the Gist version.\n'
       +'Any local changes not yet synced will be lost.\n\n'
       +'Continue?';
-    if(!confirm(msg))return;
+    if(!confirm(msg)){_syncSuppress=false;return;}
     S=Object.assign({properties:[],expenses:[],loans:[],accounts:[],transfers:[],vendors:[],quotes:[],policies:[],tenants:[],rentPayments:[],reminders:[]},parsed);
     save();
     fillSelects();
     renderDash();
     updateSync();
+    _syncSuppress=false;
     if(m){m.style.color='var(--green)';m.textContent='Pull successful — '+gistProps+' properties, '+gistExp+' expenses loaded.';}
     document.getElementById('sync-dot').className='sync-dot ok';
   }catch(e){
+    _syncSuppress=false;
     if(m){m.style.color='var(--red)';m.textContent='Pull failed: '+e.message;}
   }
 }
@@ -2447,10 +2607,10 @@ function autoCreateCardReminders(cardIdx,card){
   var label=cardLabel(card)+' payment due';
   // 7 days before
   var d7=new Date(due);d7.setDate(d7.getDate()-7);
-  S.reminders.push({propIdx:'card',task:label,due:fmt2(d7),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx,cardOwner:card.owner||'personal'});
+  S.reminders.push({propIdx:'card',task:label,due:fmt2(d7),category:'Payment',priority:'High',recurUnit:'month',recurEvery:1,done:false,cardRef:cardIdx,cardOwner:card.owner||'personal'});
   // 3 days before
   var d3=new Date(due);d3.setDate(d3.getDate()-3);
-  S.reminders.push({propIdx:'card',task:label+' — 3 days',due:fmt2(d3),category:'Payment',priority:'High',recurring:'monthly',done:false,cardRef:cardIdx,cardOwner:card.owner||'personal'});
+  S.reminders.push({propIdx:'card',task:label+' — 3 days',due:fmt2(d3),category:'Payment',priority:'High',recurUnit:'month',recurEvery:1,done:false,cardRef:cardIdx,cardOwner:card.owner||'personal'});
 }
 function openEditCard(i){
   var c=S.cards[i];if(!c)return;
@@ -3838,7 +3998,21 @@ function valueAge(p){
   return Math.round(days/365)+'y ago';
 }
 
+// Guard against closing with work that never reached the Gist.
+window.addEventListener('beforeunload', function(e){
+  if(!_dirty)return;
+  var g=loadCfg();
+  if(!g.token||!g.id)return;
+  e.preventDefault();
+  e.returnValue='';
+});
+// Mobile/tab-switch: browsers may never fire beforeunload, so push on hide.
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='hidden'&&_dirty)flushSync();
+});
+
 // INIT
+if(migrateRecurrence())save();
 fillSelects();
 renderDash();
 updateSync();
