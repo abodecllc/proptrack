@@ -827,7 +827,7 @@ tr:hover td{background:rgba(255,255,255,0.015)}
           <div class="field"><label>From account</label><select id="tr-from" style="width:200px"></select></div>
           <div class="field"><label>To account</label><select id="tr-to" style="width:200px"></select></div>
           <div class="field"><label>Amount ($)</label><input type="number" id="tr-amt" placeholder="0.00" style="width:120px"></div>
-          <div class="field"><label>Purpose</label><select id="tr-purpose" style="width:160px"><option>Rent proceeds</option><option>Expense reimbursement</option><option>Owner draw</option><option>Capital contribution</option><option>Mortgage payment</option><option>Escrow deposit</option><option>Principal paydown</option><option>Reserve funding</option><option>Security deposit</option><option>Other</option></select></div>
+          <div class="field"><label>Purpose</label><select id="tr-purpose" style="width:160px"><option>Rent proceeds</option><option>Expense reimbursement</option><option>Owner draw</option><option>Capital contribution</option><option>Mortgage payment</option><option>Reserve funding</option><option>Security deposit</option><option>Other</option></select></div>
           <button class="btn primary" onclick="addTransfer()">Log</button>
         </div>
         <div class="form-row">
@@ -1539,8 +1539,14 @@ document.querySelectorAll('.modal-bg').forEach(function(m){m.addEventListener('c
 function fillSelects(){
   ['e-prop','ee-prop','l-prop','el-prop','t-prop','r-prop','eq-prop','ins-prop','ep2-prop','inc-prop','ei-prop','rec-prop','er-prop','as-prop','ea2-prop'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
+    var prev=el.value;                 // keep what the user picked
     el.innerHTML='';
     S.properties.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=sh(p.address);el.appendChild(o);});
+    // Restore only if that option still exists (property may have been removed)
+    if(prev!==''&&prev!=null){
+      var still=Array.prototype.some.call(el.options,function(o){return o.value===prev;});
+      if(still)el.value=prev;
+    }
   });
   var ef=document.getElementById('ef-prop');
   if(ef){
@@ -1686,16 +1692,7 @@ function fillSelects(){
       var isFilter=sid==='trf-acct';
       var sprev=el.value;
       el.innerHTML=isFilter?'<option value="">All accounts</option>':'<option value="">-- select account --</option>';
-      if(S.accounts.length){
-        var gA=document.createElement('optgroup');gA.label='Bank Accounts';
-        S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value=i;o.textContent=a.nick||a.bank+' '+a.type;gA.appendChild(o);});
-        el.appendChild(gA);
-      }
-      if(S.loans.length){
-        var gL=document.createElement('optgroup');gL.label='Loans (escrow / principal)';
-        S.loans.forEach(function(l,i){var o=document.createElement('option');o.value='loan_'+i;o.textContent=loanLabel(i);gL.appendChild(o);});
-        el.appendChild(gL);
-      }
+      S.accounts.forEach(function(a,i){var o=document.createElement('option');o.value=i;o.textContent=a.nick||a.bank+' '+a.type;el.appendChild(o);});
       if(sprev)el.value=sprev;
     });
     var trfy=document.getElementById('trf-yr');
@@ -1889,9 +1886,13 @@ function addExpense(){
     S.expenses.push({propIdx:pi,date:d,category:cat,desc:desc,amount:a,deductible:document.getElementById('e-ded').value,paidWith:(document.getElementById('e-acct')&&document.getElementById('e-acct').value)||'',schedule:sched});
   }
   save();renderExp();fillSelects();
-  ['e-date','e-amt','e-desc','e-interest'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-  toggleMortgageRow('');
-  document.getElementById('e-cat').value='Repairs & maintenance';
+  // Clear only what is unique to a single entry. Property, category, date,
+  // deductible and paid-with stay put so consecutive entries don't need
+  // re-picking.
+  ['e-amt','e-desc','e-interest'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  toggleMortgageRow(cat);
+  toastInto('exp-manual','Saved \u2014 '+fm(a)+' to '+sh((S.properties[pi]||{}).address||'')+'. Form kept for the next entry.');
+  var amtEl=document.getElementById('e-amt');if(amtEl)amtEl.focus();
 }
 function delExp(i){S.expenses.splice(i,1);save();renderExp();}
 function openEditExp(i){
@@ -2172,7 +2173,10 @@ function addRentPay(){
   var t=S.tenants[ti];
   S.rentPayments.push({tenantIdx:ti,month:mo,amount:parseFloat(document.getElementById('rp-amt').value)||0,date:document.getElementById('rp-date').value,status:document.getElementById('rp-stat').value,notes:document.getElementById('rp-notes').value.trim(),expected:t?t.rent:0});
   save();renderRentLog();
-  ['rp-month','rp-amt','rp-date','rp-notes'].forEach(function(id){document.getElementById(id).value='';});
+  // Keep month and date — logging several tenants for the same month is the
+  // common case. Only the per-payment values clear.
+  ['rp-amt','rp-notes'].forEach(function(id){document.getElementById(id).value='';});
+  toastInto('rent','Payment logged. Month and date kept for the next tenant.');
 }
 function delRentPay(i){S.rentPayments.splice(i,1);save();renderRentLog();}
 function renderRentLog(){
@@ -2332,18 +2336,22 @@ function togRem(i){
   r.done=!r.done;
   save();renderRem();
 }
-// Brief inline confirmation, since a rescheduled reminder otherwise looks
-// like nothing happened.
-function toastRem(msg){
-  var host=document.getElementById('reminder-list');
+// Brief inline confirmation. Used where a save leaves the form looking
+// unchanged, so the action would otherwise seem to do nothing.
+function toastInto(hostId,msg){
+  var host=document.getElementById(hostId);
   if(!host)return;
+  var old=host.querySelector('.pt-toast');
+  if(old&&old.parentNode)old.parentNode.removeChild(old);
   var t=document.createElement('div');
+  t.className='pt-toast';
   t.textContent=msg;
   t.style.cssText='background:var(--green-bg);border:1px solid rgba(76,175,125,0.35);color:var(--green);'
     +'border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:13px';
   host.insertBefore(t,host.firstChild);
   setTimeout(function(){ if(t.parentNode)t.parentNode.removeChild(t); },3200);
 }
+function toastRem(msg){ toastInto('reminder-list',msg); }
 function delRem(i){S.reminders.splice(i,1);save();renderRem();}
 function renderRem(){
   var el=document.getElementById('reminder-list');
@@ -3917,19 +3925,6 @@ function renderAccounts(){
 }
 
 // TRANSFERS
-// Transfer endpoints are either a bank account (stored as its index, as before)
-// or a loan (stored as 'loan_N'), so escrow deposits and principal paydowns
-// can be logged without adding a fake bank account.
-function trRef(v){return String(v).indexOf('loan_')===0?String(v):parseInt(v);}
-function loanLabel(i){
-  var l=S.loans[i];if(!l)return '?';
-  var p=S.properties[l.propIdx];
-  return 'Loan: '+(l.lender||'Lender')+(p?' \u2014 '+sh(p.address):'');
-}
-function trLabel(v){
-  if(String(v).indexOf('loan_')===0)return loanLabel(parseInt(String(v).slice(5)));
-  return acctLabel(v);
-}
 function addTransfer(){
   var from=document.getElementById('tr-from').value;
   var to=document.getElementById('tr-to').value;
@@ -3938,8 +3933,8 @@ function addTransfer(){
   if(!date||!amt||from===''||to==='')return;
   S.transfers.push({
     date:date,
-    from:trRef(from),
-    to:trRef(to),
+    from:parseInt(from),
+    to:parseInt(to),
     amount:amt,
     purpose:document.getElementById('tr-purpose').value,
     notes:document.getElementById('tr-notes').value.trim()
@@ -3963,8 +3958,8 @@ function renderTransfers(){
   tb.innerHTML=data.map(function(t){
     return '<tr>'
       +'<td style="font-family:monospace;font-size:12px;white-space:nowrap">'+fd(t.date)+'</td>'
-      +'<td style="color:var(--text2)">'+trLabel(t.from)+'</td>'
-      +'<td style="color:var(--text2)">'+trLabel(t.to)+'</td>'
+      +'<td style="color:var(--text2)">'+acctLabel(t.from)+'</td>'
+      +'<td style="color:var(--text2)">'+acctLabel(t.to)+'</td>'
       +'<td style="font-family:monospace"><strong>'+fm(t.amount)+'</strong></td>'
       +'<td><span class="badge gray">'+t.purpose+'</span></td>'
       +'<td style="color:var(--text3)">'+(t.notes||'—')+'</td>'
